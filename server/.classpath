@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/nanohttpd"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/nanohttpd-webserver"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/jedis"/>
+	<classpathentry kind="lib" path="/Users/Steven/java_libs/google-gson-2.2.4/gson-2.2.4.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/nanohttpd-websocket"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

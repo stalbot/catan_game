@@ -1,0 +1,54 @@
+<html>
+
+    <head>
+        <script src="http://localhost:8081/angular.js"></script>
+        <script src="http://localhost:8081/jquery.js"></script>
+        <script src="http://localhost:8081/catan.js"></script>
+    </head>
+
+    <body ng-app="CatanApp" ng-controller="BoardController">
+
+        <svg ng-attr-height="{{ board.height }}" ng-attr-width="{{ board.width }}">
+            <polygon ng-repeat="hex in hexes" ng-attr-points="{{ hex.points }}" ng-attr-fill="{{ hex.color }}"
+                stroke="black"
+                stroke-width="2px">
+            </polygon>
+            <polygon ng-repeat="inter in intersections" ng-attr-points="{{ inter.points }}" ng-attr-fill="{{ inter.color }}">
+            </polygon>
+            <line ng-repeat="edge in edges"
+                ng-attr-x1="{{ edge.x1 }}" ng-attr-x2="{{ edge.x2 }}"
+                ng-attr-y1="{{ edge.y1 }}" ng-attr-y2="{{ edge.y2 }}"
+                ng-attr-stroke="{{ edge.color }}" stroke-width="5px">
+            </line>
+
+            <line ng-repeat="line in harborLines"
+                ng-attr-x1="{{ line.x1 }}" ng-attr-x2="{{ line.x2 }}"
+                ng-attr-y1="{{ line.y1 }}" ng-attr-y2="{{ line.y2 }}"
+                stroke-width="3px" stroke-dasharray="5,5" stroke="black">
+            </line>
+
+            <circle ng-repeat="circle in circles"
+                ng-attr-cx="{{ circle.cx }}"
+                ng-attr-cy="{{ circle.cy }}"
+                stroke="black"
+                stroke-width="1px"
+                ng-attr-r="{{ circle.radius }}"
+                ng-attr-fill="{{ circle.color }}">
+            </circle>
+            <text ng-repeat="circle in circles"
+                ng-attr-x="{{ circle.textX }}"
+                ng-attr-y="{{ circle.textY }}"
+                ng-style="{'font-size': circle.fontSize}"
+                style="font-size:px">
+                {{ circle.text }}
+            </text>
+            <text ng-repeat="circle in circles"
+                ng-attr-x="{{ circle.dotsX }}"
+                ng-style="{'font-size': circle.fontSize}"
+                ng-attr-y="{{ circle.dotsY }}">
+                {{ circle.probabilityDots }}
+            </text>
+        </svg>
+    </body>
+
+</html>
