@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public final class Hex {
+public final class Hex implements DataContainer.Keyable {
 	
 	public static final int[][] directions = new int[][] {
 		// 2nd index (z values) can just be ignored
@@ -34,22 +34,22 @@ public final class Hex {
 		this.yPosition = yPosition;
 		this.id = id;
 		for (int i=0; i<6; i++) {
-			edges.add(null); inters.add(null);
+			this.edges.add(null); this.inters.add(null); this.edgeIds.add(null); this.interIds.add(null);
 		}
 	}
 	
-	int getId() {
+	public int getId() {
 		return this.id;
 	}
 	
 	void addEdge(Edge edge, int num) {
-		this.edgeIds.add(num, edge.getId());
-		this.edges.add(num, edge);
+		this.edgeIds.set(num, edge.getId());
+		this.edges.set(num, edge);
 	}
 	
 	void addIntersection(Intersection inter, int num) {
-		this.interIds.add(num, inter.getId());
-		this.inters.add(num, inter);
+		this.interIds.set(num, inter.getId());
+		this.inters.set(num, inter);
 	}
 	
 	HarborType getHarborType() {
@@ -160,6 +160,8 @@ public final class Hex {
 	
 	public int getRollProbability() {
 		// returns roll probability out of 36
+		if (this.rollNumber == null)
+			return 0;
 		return 6 - Math.abs(7 - this.rollNumber);
 	}
 	

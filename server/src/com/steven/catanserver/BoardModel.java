@@ -17,6 +17,7 @@ public class BoardModel {
 	public static final String TURN_KEY = "turn";
 	public static final String HEX_KEY = "hexes";
 	public static final String INTERSECTION_KEY = "intersections";
+	public static final String EDGE_KEY = "edges";
 	public static final String HAND_KEY = "hands";
 	public static final String HUMAN_PLAYERS_KEY = "humanPlayers";
 	public static final String COMPUTER_PLAYERS_KEY = "computerPlayers";
@@ -35,6 +36,9 @@ public class BoardModel {
 		HandData hands = gson.fromJson(rawBoardData.get(HAND_KEY), HandData.class);
 		HexData hexes = gson.fromJson(rawBoardData.get(HEX_KEY), HexData.class);
 		IntersectionData inters = gson.fromJson(rawBoardData.get(INTERSECTION_KEY), IntersectionData.class);
+		EdgeData edges = gson.fromJson(rawBoardData.get(EDGE_KEY), EdgeData.class);
+//		System.out.println("Recovered edges from db, size: " + edges.getEdges().size());
+//		System.out.println("Here are all the edges:\n" + rawBoardData.get(EDGE_KEY));
 		
 		HumanPlayer[] humanPlayersArr = gson.fromJson(rawBoardData.get(HUMAN_PLAYERS_KEY), HumanPlayer[].class);
 		ArrayList<HumanPlayer> humanPlayers = new ArrayList<HumanPlayer>(humanPlayersArr.length);
@@ -48,11 +52,7 @@ public class BoardModel {
 		}
 		int numPlayers = humanPlayers.size() + computerPlayers.size();
 			
-		BoardModel board = new BoardModel(numPlayers, boardId, hexes, inters, hands);
-		board.id = boardId;
-		board.hexes = hexes;
-		board.intersections = inters;
-		board.handData = hands;
+		BoardModel board = new BoardModel(numPlayers, boardId, hexes, inters, edges, hands);
 		for (ComputerPlayer cp : computerPlayers)
 			board.addComputerPlayer(cp);
 		for (HumanPlayer hp : humanPlayers)
@@ -66,8 +66,10 @@ public class BoardModel {
 
 //		System.out.println(String.format("%s %s %s %s %s", board, board.players, board.hexes, board.handData, board.intersections));
 
+		// This does one final bit of setup that we need to get around the GSON automatic instantiation
 		inters.finalizeFromDB(board);
 		hexes.finalizeFromDB(board);
+		edges.finalizeFromDB(board);
 		
 		return board;
 	}
@@ -76,7 +78,9 @@ public class BoardModel {
 		System.out.println("Making new board with " + numPlayers + " players");
 		BoardModel board = new BoardModel(numPlayers);
 		board.hexes = HexData.generateHexes(board);
-		board.intersections = board.hexes.setupIntersections();
+		HexData.EdgeIntersectionContainer eic = board.hexes.setupIntersections();
+		board.intersections = eic.intersectionData;
+		board.edges = eic.edgeData;
 		board.id = UUID.randomUUID().toString();
 		board.victoryPoints = new VictoryPointData(10);
 		
@@ -116,6 +120,7 @@ public class BoardModel {
 
 	private HexData hexes;
 	private IntersectionData intersections;
+	private EdgeData edges;
 	private String id;
 	private int turnNumber = 0;
 	private ArrayList<Player> players;
@@ -154,8 +159,13 @@ public class BoardModel {
 			this.players.add(null);
 	}
 	
-	public BoardModel(int numPlayers, String id, HexData hexes, IntersectionData intersects, HandData hands) {
+	public BoardModel(int numPlayers, String id, HexData hexes, IntersectionData intersects, EdgeData edges, HandData hands) {
 		this(numPlayers);
+		this.id = id;
+		this.hexes = hexes;
+		this.intersections = intersects;
+		this.edges = edges;
+		this.handData = hands;
 	}
 	
 	public Iterable<Hex> getHexes() {
@@ -166,12 +176,28 @@ public class BoardModel {
 		return this.intersections.getIntersections();
 	}
 	
+	public IntersectionData getIntersectionData() {
+		return this.intersections;
+	}
+	
+	public EdgeData getEdgeData() {
+		return this.edges;
+	}
+	
 	/* Methods for players to modify the board */
 	
 	void placeSettlement(Intersection inter, Player p) {
 		inter.placeSettlement(p);
 		this.saveModifiedToDB();
 		String message = new Gson().toJson(new TurnEvent.IntersectionChangeEvent(p, inter));
+		this.sendMessage(message);
+	}
+	
+	public void placeRoad(Edge edge, Player player) {
+		System.out.println("Placing road.");
+		edge.placeRoad(player);
+		this.saveModifiedToDB();
+		String message = new Gson().toJson(new TurnEvent.EdgeChangeEvent(player, edge));
 		this.sendMessage(message);
 	}
 	
@@ -222,6 +248,7 @@ public class BoardModel {
 		client.hset(this.getRedisKey(), HAND_KEY, gson.toJson(this.handData));
 		client.hset(this.getRedisKey(), TURN_KEY, String.valueOf(this.turnNumber));
 		client.hset(this.getRedisKey(), INTERSECTION_KEY, gson.toJson(this.intersections));
+		client.hset(this.getRedisKey(), EDGE_KEY, gson.toJson(this.edges));
 		client.hset(this.getRedisKey(), HEX_KEY, gson.toJson(this.hexes));
 		client.hset(this.getRedisKey(), HUMAN_PLAYERS_KEY, gson.toJson(this.humanPlayers));
 		client.hset(this.getRedisKey(), COMPUTER_PLAYERS_KEY, gson.toJson(this.computerPlayers));
@@ -236,6 +263,7 @@ public class BoardModel {
 		client.hset(this.getRedisKey(), TURN_KEY, String.valueOf(this.turnNumber));
 		client.hset(this.getRedisKey(), HAND_KEY, gson.toJson(this.handData));
 		client.hset(this.getRedisKey(), INTERSECTION_KEY, gson.toJson(this.intersections));
+		client.hset(this.getRedisKey(), EDGE_KEY, gson.toJson(this.edges));
 		client.hset(this.getRedisKey(), HUMAN_PLAYERS_KEY, gson.toJson(this.humanPlayers));
 		client.hset(this.getRedisKey(), COMPUTER_PLAYERS_KEY, gson.toJson(this.computerPlayers));
 //		System.out.println(client.hgetAll(this.getRedisKey()));

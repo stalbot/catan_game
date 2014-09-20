@@ -6,47 +6,54 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
-public class Edge {
+public class Edge implements DataContainer.Keyable {
 	
 	private transient HashSet<Hex> hexes;
 	
 	private transient HashMap<Integer, Intersection> intersections = null;
-	private ArrayList<Integer> intersectionIds = new ArrayList<Integer>(2);
 	
 	private int id;
 	private PlayerColor color = null;
-	private transient IntersectionData parent;
+	private transient EdgeData parent;
+	private DataContainer.KeyedRelation<Intersection> neighboringIntersections = 
+			(this.parent != null && this.neighboringIntersections == null) ?
+					new DataContainer.KeyedRelation<Intersection>(this.parent.getIntersectionData()) : 
+						null;
 	
 	Edge(int id, Collection<Hex> hexes) {
 		this.hexes = new HashSet<Hex>(hexes);
 		this.id = id;
 	}
+	
+	private DataContainer.KeyedRelation<Intersection> getNeighboringIntersections() {
+		assert (this.parent != null);
+		if (this.neighboringIntersections == null)
+			this.neighboringIntersections = new DataContainer.KeyedRelation<Intersection>(this.parent.getIntersectionData());
+		if (this.neighboringIntersections.getRawData() == null)
+			this.neighboringIntersections.setup(this.parent.getIntersectionData());
+		return this.neighboringIntersections;
+	}
 
-	public Integer getId() {
+	public int getId() {
 		// TODO Auto-generated method stub
 		return this.id;
 	}
 	
-	HashMap<Integer, Intersection> getIntersectionMap() {
-		if (this.intersections == null) {
-			this.intersections = new HashMap<Integer, Intersection>(2);
-			for (Integer id : this.intersectionIds)
-				this.intersections.put(id, this.parent.getIntersection(id));
-		}
-		return this.intersections;
-	}
-	
 	Iterable<Intersection> getIntersections() {
-		return this.getIntersectionMap().values();
+		return this.getNeighboringIntersections().getAll();
 	}
 	
 	void addIntersection(Intersection inter) {
-		this.getIntersectionMap().put(inter.getId(), inter);
-		assert (this.intersections.size() <= 2);
+		this.getNeighboringIntersections().add(inter);
 	}
 	
-	void setParent(IntersectionData interd) {
-		this.parent = interd;
+	void setParent(EdgeData edged) {
+		this.parent = edged;
+	}
+
+	public void placeRoad(Player player) {
+		System.out.println("Placing road on edge " + this.getId() + " with intersection neighbors " + this.getNeighboringIntersections().ids);
+		this.color = player.getPlayerColor();
 	}
 	
 }

@@ -47,6 +47,10 @@ public abstract class Player {
 	void placeSettlement(Intersection inter) {
 		this.getBoard().placeSettlement(inter, this);
 	}
+	
+	void placeRoad(Edge edge) {
+		this.getBoard().placeRoad(edge, this);
+	}
 
 	// intention for this: returns true if we should keep going, false means terminate,
 	// we are waiting on some non-CPU player to make a move

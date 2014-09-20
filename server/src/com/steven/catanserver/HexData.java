@@ -19,7 +19,7 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.steven.catanserver.HexData.IJCoords;
 
-public final class HexData {
+public final class HexData implements DataContainer<Hex> {
 	
 	public static final HashMap<HexType, Integer> defaultHexCounts = new HashMap<HexType, Integer>();
 	public static final HashMap<Integer, Integer> defaultNumCounts = new HashMap<Integer, Integer>();
@@ -106,6 +106,10 @@ public final class HexData {
 	private int minWidth = 0;
 	private transient BoardModel board;
 	
+	public BoardModel getBoard() {
+		return board;
+	}
+	
 	private HexData(int radius, BoardModel board) {
 		this.radius = radius;
 		this.board = board;
@@ -164,10 +168,19 @@ public final class HexData {
 		return this.hexes.values();
 	}
 	
-	IntersectionData setupIntersections() {
+	public static class EdgeIntersectionContainer {
+		EdgeIntersectionContainer(IntersectionData i, EdgeData e) { 
+			this.intersectionData = i; this.edgeData = e;
+		}
+		public IntersectionData intersectionData;
+		public EdgeData edgeData;
+	}
+	
+	EdgeIntersectionContainer setupIntersections() {
 		int interIdCounter = 0;
 		int edgeIdCounter = 0;
-		IntersectionData interData = new IntersectionData(this.radius, this.board);
+		IntersectionData interData = new IntersectionData(this.board);
+		EdgeData edgeData = new EdgeData(this.board);
 		HashMap<HashSet<Hex>, Intersection> intersectionCache = new HashMap<HashSet<Hex>, Intersection>();
 		HashMap<HashSet<Hex>, Edge> edgeCache = new HashMap<HashSet<Hex>, Edge>();
 		for (Hex hex : this.getAllHexes()) {
@@ -197,22 +210,30 @@ public final class HexData {
 				if (ht != null) 
 					inter.setHarborType(ht);
 				hex.addIntersection(inter, k);
+				if (hex.getIntersections().size() > 6)
+					System.out.println("BAAD, hex had more than 6 interections");
 				HashSet<Hex> edgeCacheKey = new HashSet<Hex>(cacheKey);
 				edgeCacheKey.remove(neighbor2); // meh...
 				Edge edge = edgeCache.get(edgeCacheKey);
 				if (edge == null) {
 					edge = new Edge(++edgeIdCounter, edgeCacheKey);
 					edgeCache.put(edgeCacheKey, edge);
-					interData.addEdge(edge);
+					edgeData.addEdge(edge);
 				}
 				hex.addEdge(edge, k);
+				if (hex.getEdges().size() > 6)
+					System.out.println("BAAD, hex had more than 6 interections");
 			}
 		}
 		
-		// more duplication of work here, but it really is probably OK
+		// more duplication of work here, but it is probably OK in a setup function like this
+		HashSet<Integer> hexIds = new HashSet<Integer>();  // for debugging
+		// TODO: something is broken, probably here.
 		for (Hex hex : this.hexes.values()) {
 			for (int i=0; i<6; i++) {
 				Edge e = hex.getEdge(i);
+				if (!hexIds.add(e.getId()))
+					System.out.println("Already saw edge " + e.getId());
 				for (int j=i; j<i + 2; j++) {
 					Intersection inter = hex.getIntersection(j % 6);
 					e.addIntersection(inter);
@@ -221,7 +242,7 @@ public final class HexData {
 			}
 		}
 		
-		return interData;
+		return new EdgeIntersectionContainer(interData, edgeData);
 	}
 	
 	private void setupHarbors() {
@@ -302,5 +323,10 @@ public final class HexData {
 
 	public void finalizeFromDB(BoardModel board) {
 		this.board = board;
+	}
+
+	@Override
+	public Hex getElement(Integer id) {
+		return this.hexes.get(id);
 	}
 }

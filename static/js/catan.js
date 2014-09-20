@@ -1,6 +1,6 @@
 var catanApp = angular.module("CatanApp", [], function() {});
 
-var baseUrl = 'localhost:8081';
+var baseUrl = location.host;
 var webSocketUrl = 'ws://' + baseUrl + '/register';
 var baseHttpUrl = 'http://' + baseUrl;
 var registerUrl = baseHttpUrl + '/register';
@@ -101,7 +101,10 @@ catanApp.factory('catanBackend', ['$http', function($http) {
                 catanBackend.pongReceived = Date.now();
                 return;
             }
-            return handleMessageCallback(message);
+            // Messages coming back in websocket with weird trailing chars, just get rid for now.
+            var temp = message.replace(/[^\w \d}{\'\"\-:\,\[\]]+/gi,'');
+            var jsonMessage = JSON.parse(temp);
+            return handleMessageCallback(jsonMessage);
         };
         ws.onopen = function() {
             pingServer();
@@ -142,8 +145,11 @@ catanApp.factory('catanBackend', ['$http', function($http) {
 }]);
 
 catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scope, catanBackend) {
+    var boardCache;
     $scope.userId = fixedUserId;
     $scope.board = {};
+    $scope.intersections = [];
+    $scope.hexes = [];
     $scope.hexColorMap = {
         ocean: '#0099FF',
         hill: '#AD5C33',
@@ -170,6 +176,7 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
         var board = response.data.board;
         $scope.playerInfo = board.playerInfo;
         refreshHand(board.playerHand);
+        boardCache = board;
         refreshHexes(board);
         refreshPieces(board);
     };
@@ -265,7 +272,7 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
                         continue;
                     if (interInfo && interInfo.color) {
                         scopeIntersections.push({
-                            color: interInfo.color,
+                            color: interInfo.color.toLowerCase(),
                             points: makeSettlementSVGPoints(centerPoint.x, centerPoint.y, sideLength, interInfo.isCity)
                         });
                     }
@@ -273,12 +280,12 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
                 angular.forEach([5, 0, 1], function(index) {
                     // this uniquely covers all relevant edges on board
                     var edgeId = hex.edgeIds[index];
-                    var edgeInfo = board.intersections.edges[edgeId];
+                    var edgeInfo = board.edges.edges[edgeId];
                     if (edgeInfo && edgeInfo.color) {
                         var point1 = interArray[index];
                         var point2 = interArray[(index + 1) % 6];
                         scopeEdges.push({
-                            color: edgeInfo.color,
+                            color: edgeInfo.color.toLowerCase(),
                             x1: point1.x,
                             x2: point2.x,
                             y1: point1.y,
@@ -305,7 +312,17 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
     };
 
     var handleMessage = function(message) {
-
+        if (message.eventType == 'INTERSECTION_CHANGE') {
+            var intersection = message.intersection;
+            boardCache.intersections.intersections[intersection.id] = intersection;
+            refreshHexes(boardCache);
+        }
+        if (message.eventType == 'EDGE_CHANGE') {
+            var edge = message.edge;
+            boardCache.edges.edges[edge.id] = edge;
+            refreshHexes(boardCache);
+        }
+        $scope.$apply();
     };
 
     var registerAndWait = function(board) {

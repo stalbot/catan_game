@@ -26,10 +26,17 @@ public class ComputerPlayer extends Player {
 		// Really the dumbest thing we can do here. 
 		// Just get something working, and probably not the worst strategy.
 		int maxProb = 0;
+		Intersection bestInter = null;
 		for (Intersection inter : this.getBoard().getIntersections()) {
-			if (getTotalProbability(inter) >  maxProb && inter.canPlaceSettlement())
-				this.placeSettlement(inter);
-		}	
+			int currentProb = getTotalProbability(inter);
+			if (currentProb >  maxProb && inter.canPlaceSettlement()) {
+				maxProb = currentProb;
+				bestInter = inter;
+			}
+		}
+		this.placeSettlement(bestInter);
+		// totally stupid about this
+		this.placeRoad(bestInter.getEdges().iterator().next());
 		return true;
 	}
 

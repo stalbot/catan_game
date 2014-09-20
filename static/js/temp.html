@@ -1,11 +1,5 @@
 <html>
 
-    <head>
-        <script src="http://localhost:8081/angular.js"></script>
-        <script src="http://localhost:8081/jquery.js"></script>
-        <script src="http://localhost:8081/catan.js"></script>
-    </head>
-
     <body ng-app="CatanApp" ng-controller="BoardController">
 
         <svg ng-attr-height="{{ board.height }}" ng-attr-width="{{ board.width }}">
@@ -49,6 +43,23 @@
                 {{ circle.probabilityDots }}
             </text>
         </svg>
+
+        <script>
+            var baseHttpUrl = location.protocol + '//' + location.host;
+            function loadScript(scriptName, callback) {
+                var scriptNode = document.createElement('script');
+                scriptNode.type = 'text/javascript';
+                scriptNode.src = baseHttpUrl + '/' + scriptName;
+                document.body.appendChild(scriptNode);
+
+                // There are several events for cross browser compatibility.
+                scriptNode.onreadystatechange = callback;
+                scriptNode.onload = callback;
+            }
+            loadScript('angular.js', function() {loadScript('catan.js')});
+            loadScript('jquery.js');
+            // loadScript('catan.js');
+        </script>
     </body>
 
 </html>

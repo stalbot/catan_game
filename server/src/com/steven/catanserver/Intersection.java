@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
-public class Intersection {
+public class Intersection implements DataContainer.Keyable {
 	
 	private int id;
 	private ArrayList<Integer> hexIds = new ArrayList<Integer>(3);
@@ -18,9 +18,22 @@ public class Intersection {
 	private HarborType harborType;
 	private transient HashMap<Integer, Intersection> neighborIntersections = null;
 	private transient IntersectionData parent;
+	private DataContainer.KeyedRelation<Edge> neighboringEdges = null;
 	
 	Intersection(int id) {
 		this.id = id;
+	}
+	
+	private DataContainer.KeyedRelation<Edge> getNeighboringEdges() {
+//		if (this.parent == null)
+//			return null;
+		assert (this.parent != null);
+		if (this.neighboringEdges == null)
+			this.neighboringEdges = new DataContainer.KeyedRelation<Edge>(this.parent.getEdgeData());
+		if (this.neighboringEdges.getRawData() == null)
+			// if this was instantiated from GSON
+			this.neighboringEdges.setup(this.parent.getEdgeData());
+		return this.neighboringEdges;
 	}
 	
 	void setParent(IntersectionData interd) {
@@ -55,22 +68,11 @@ public class Intersection {
 	}
 	
 	public void addEdge(Edge e) {
-		this.getEdgeMap().put(e.getId(), e);
-		this.edgeIds.add(e.getId());
-		assert (this.edges.size() <= 3);
-	}
-	
-	private HashMap<Integer, Edge> getEdgeMap() {
-		if (this.edges == null) {
-			this.edges = new HashMap<Integer, Edge>(3);
-			for (Integer edgeId : this.edgeIds)
-				this.edges.put(id, this.parent.getEdge(edgeId));
-		}
-		return this.edges;
+		this.getNeighboringEdges().add(e);
 	}
 	
 	public Iterable<Edge> getEdges() {
-		return this.getEdgeMap().values();
+		return this.getNeighboringEdges().getAll();
 	}
 	
 	public Boolean hasSettlement() {
@@ -89,6 +91,11 @@ public class Intersection {
 	}
 	
 	public Boolean canPlaceSettlement() {
+		if (this.hasSettlement())
+			return false;
+//		System.out.println("Neighbors " + this.getNeighborIntersections().values());
+//		System.out.println("Edges " + this.getEdges());
+//		System.out.println("Edge ids" + this.edgeIds);
 		for(Intersection inter : this.getNeighborIntersections().values())
 			if (inter.hasSettlement())
 				return false;
@@ -96,6 +103,7 @@ public class Intersection {
 	}
 	
 	public void placeSettlement(Player p) {
+		System.out.println("Placing settlement on intersection " + this.getId() + " with edge neighbors " + this.getNeighboringEdges().ids);
 		this.color = p.getPlayerColor();
 	}
 
