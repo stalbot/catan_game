@@ -44,22 +44,9 @@
             </text>
         </svg>
 
-        <script>
-            var baseHttpUrl = location.protocol + '//' + location.host;
-            function loadScript(scriptName, callback) {
-                var scriptNode = document.createElement('script');
-                scriptNode.type = 'text/javascript';
-                scriptNode.src = baseHttpUrl + '/' + scriptName;
-                document.body.appendChild(scriptNode);
-
-                // There are several events for cross browser compatibility.
-                scriptNode.onreadystatechange = callback;
-                scriptNode.onload = callback;
-            }
-            loadScript('angular.js', function() {loadScript('catan.js')});
-            loadScript('jquery.js');
-            // loadScript('catan.js');
-        </script>
+        <script src="/angular.js"></script>
+        <script src="/jquery.js"></script>
+        <script src="/catan.js"></script>
     </body>
 
 </html>
