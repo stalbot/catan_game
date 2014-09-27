@@ -4,6 +4,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPubSub;
 
 public class HumanPlayer extends Player {
+	public final transient Boolean isSync = false;
 	
 	HumanPlayer(PlayerColor pc, BoardModel board, String userId, int turnOrder) {
 		super(pc, board, turnOrder, userId);
@@ -66,6 +67,36 @@ public class HumanPlayer extends Player {
 	@Override
 	public Boolean doSetupTurn() {
 		System.out.println(this.getPlayerColor() + " (human) doing setup.");
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public TradeResponse repondToTrade(CardCollection askedFor, CardCollection offered, Boolean allowCounter) {
+		// TODO Auto-generated method stub
+		return new TradeResponse(false);
+	}
+
+	@Override
+	public RobberResponse doMoveRobber() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public CardType chooseMonopoly() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public CardType chooseResource() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean chooseRoadPlacement() {
 		// TODO Auto-generated method stub
 		return false;
 	}

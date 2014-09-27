@@ -43,6 +43,9 @@
                 {{ circle.probabilityDots }}
             </text>
         </svg>
+        <div class="game-message-container" ng-style="{width: board.width, height: '100px', overflow: 'scroll'}">
+            <span ng-repeat="message in gameMessages track by $index">{{ message }}<br/></span>
+        </div>
 
         <script src="/angular.js"></script>
         <script src="/jquery.js"></script>

@@ -9,9 +9,7 @@ public class Intersection implements DataContainer.Keyable {
 	
 	private int id;
 	private ArrayList<Integer> hexIds = new ArrayList<Integer>(3);
-	private ArrayList<Integer> edgeIds = new ArrayList<Integer>(3);
 	private transient HashSet<Hex> hexes = null;
-	private transient HashMap<Integer, Edge> edges = null;
 	private Boolean isCity = false;
 	private PlayerColor color = null;
 	private transient Player player;
@@ -46,6 +44,10 @@ public class Intersection implements DataContainer.Keyable {
 	
 	public int getId() {
 		return this.id;
+	}
+	
+	public HarborType getHarbor() {
+		return this.harborType;
 	}
 	
 	public void setHexes(Collection<Hex> hexes) {
@@ -105,6 +107,19 @@ public class Intersection implements DataContainer.Keyable {
 	public void placeSettlement(Player p) {
 		System.out.println("Placing settlement on intersection " + this.getId() + " with edge neighbors " + this.getNeighboringEdges().ids);
 		this.color = p.getPlayerColor();
+	}
+	
+	public void placeCity(Player p) {
+		assert(this.color == p.getPlayerColor());
+		this.isCity = true;
+	}
+
+	public boolean canPlaceCity() {
+		return (!this.isCity && this.color != null);
+	}
+	
+	public PlayerColor getSettlementColor() {
+		return this.color;
 	}
 
 }

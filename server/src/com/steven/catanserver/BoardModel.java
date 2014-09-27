@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -11,14 +12,20 @@ import com.google.gson.Gson;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPubSub;
+import redis.clients.jedis.Pipeline;
 
 public class BoardModel {
+	
+	public static final int VPS_TO_WIN = 10;
 	
 	public static final String TURN_KEY = "turn";
 	public static final String HEX_KEY = "hexes";
 	public static final String INTERSECTION_KEY = "intersections";
 	public static final String EDGE_KEY = "edges";
 	public static final String HAND_KEY = "hands";
+	public static final String ROBBER_KEY = "robber";
+	public static final String DEV_CARD_KEY = "dev_cards";
+	public static final String VP_KEY = "victory_points";
 	public static final String HUMAN_PLAYERS_KEY = "humanPlayers";
 	public static final String COMPUTER_PLAYERS_KEY = "computerPlayers";
 	public static final String MOST_RECENT_MESSAGE_KEY = "mostRecentMessage";
@@ -37,6 +44,8 @@ public class BoardModel {
 		HexData hexes = gson.fromJson(rawBoardData.get(HEX_KEY), HexData.class);
 		IntersectionData inters = gson.fromJson(rawBoardData.get(INTERSECTION_KEY), IntersectionData.class);
 		EdgeData edges = gson.fromJson(rawBoardData.get(EDGE_KEY), EdgeData.class);
+		VictoryPointData vps = gson.fromJson(rawBoardData.get(VP_KEY), VictoryPointData.class);
+		DevelopmentCard[] devCards = gson.fromJson(rawBoardData.get(DEV_CARD_KEY), DevelopmentCard[].class);
 //		System.out.println("Recovered edges from db, size: " + edges.getEdges().size());
 //		System.out.println("Here are all the edges:\n" + rawBoardData.get(EDGE_KEY));
 		
@@ -52,7 +61,7 @@ public class BoardModel {
 		}
 		int numPlayers = humanPlayers.size() + computerPlayers.size();
 			
-		BoardModel board = new BoardModel(numPlayers, boardId, hexes, inters, edges, hands);
+		BoardModel board = new BoardModel(numPlayers, boardId, hexes, inters, edges, hands, vps);
 		for (ComputerPlayer cp : computerPlayers)
 			board.addComputerPlayer(cp);
 		for (HumanPlayer hp : humanPlayers)
@@ -63,6 +72,9 @@ public class BoardModel {
 			p.setBoard(board);
 		
 		board.turnNumber = Integer.parseInt(rawBoardData.get(TURN_KEY));
+		board.devCards = new LinkedList<DevelopmentCard>();
+		for (int i=0; i<devCards.length; i++)
+			board.devCards.add(devCards[i]);
 
 //		System.out.println(String.format("%s %s %s %s %s", board, board.players, board.hexes, board.handData, board.intersections));
 
@@ -75,6 +87,7 @@ public class BoardModel {
 	}
 	
 	public static BoardModel makeNewBoard(int numPlayers, String userId) {
+		int numHumans = 0;  // for debugging
 		System.out.println("Making new board with " + numPlayers + " players");
 		BoardModel board = new BoardModel(numPlayers);
 		board.hexes = HexData.generateHexes(board);
@@ -82,17 +95,20 @@ public class BoardModel {
 		board.intersections = eic.intersectionData;
 		board.edges = eic.edgeData;
 		board.id = UUID.randomUUID().toString();
-		board.victoryPoints = new VictoryPointData(10);
+		board.devCards = DevelopmentCard.getNewDevCardStack();
 		
 		LinkedList<Integer> turnOrders = new LinkedList<Integer>();
 		for (int i=0; i<numPlayers; i++)
 			turnOrders.add(i);
 		Collections.shuffle(turnOrders);
 		// For now, only one human player
-		board.addHumanPlayer(new HumanPlayer(PlayerColor.values()[0], board, userId, turnOrders.remove()));
-		for (int i=0; i<numPlayers - 1; i++) {
-			board.addComputerPlayer(new ComputerPlayer(PlayerColor.values()[i + 1], board, turnOrders.remove()));
+		for (int i=0; i<numHumans; i++)
+			// TODO: this needs TLC, but OK for now
+			board.addHumanPlayer(new HumanPlayer(PlayerColor.values()[i], board, userId, turnOrders.remove()));
+		for (int i=numHumans; i<numPlayers; i++) {
+			board.addComputerPlayer(new ComputerPlayer(PlayerColor.values()[i], board, turnOrders.remove()));
 		}
+		board.victoryPoints = new VictoryPointData(VPS_TO_WIN, board.players);
 		board.turnNumber = -2 * numPlayers;
 		
 		board.saveToDB();
@@ -101,6 +117,10 @@ public class BoardModel {
 	
 	public void startSetup() {
 		new Thread(new RunSetup()).start();
+	}
+	
+	public void startTurnLoop() {
+		new Thread(new RunTurnLoop()).start();
 	}
 	
 	private void addComputerPlayer(ComputerPlayer computerPlayer) {
@@ -128,7 +148,8 @@ public class BoardModel {
 	private transient ArrayList<ComputerPlayer> computerPlayers = new ArrayList<ComputerPlayer>();
 	private transient HashMap<String, Player> playerMap;
 	private transient HandData handData;
-	private transient VictoryPointData victoryPoints;
+	private VictoryPointData victoryPoints;
+	private List<DevelopmentCard> devCards;
 
 	public Hex getHex(Integer i) {
 		return this.hexes.getById(i);
@@ -145,7 +166,8 @@ public class BoardModel {
 			if (p.getId().contentEquals(playerId))
 				return p;
 		}
-		return null;
+		// Spectator mode
+		return new HumanPlayer(null, this, playerId, -1);
 	}
 	
 	Player getPlayer(String playerId) {
@@ -159,13 +181,14 @@ public class BoardModel {
 			this.players.add(null);
 	}
 	
-	public BoardModel(int numPlayers, String id, HexData hexes, IntersectionData intersects, EdgeData edges, HandData hands) {
+	public BoardModel(int numPlayers, String id, HexData hexes, IntersectionData intersects, EdgeData edges, HandData hands, VictoryPointData vps) {
 		this(numPlayers);
 		this.id = id;
 		this.hexes = hexes;
 		this.intersections = intersects;
 		this.edges = edges;
 		this.handData = hands;
+		this.victoryPoints = vps;
 	}
 	
 	public Iterable<Hex> getHexes() {
@@ -184,6 +207,14 @@ public class BoardModel {
 		return this.edges;
 	}
 	
+	public HexData getHexData() {
+		return this.hexes;
+	}
+	
+	public HandData getHandData() {
+		return this.handData;
+	}
+	
 	/* Methods for players to modify the board */
 	
 	void placeSettlement(Intersection inter, Player p) {
@@ -199,6 +230,43 @@ public class BoardModel {
 		this.saveModifiedToDB();
 		String message = new Gson().toJson(new TurnEvent.EdgeChangeEvent(player, edge));
 		this.sendMessage(message);
+	}
+	
+	void placeCity(Intersection inter, Player p) {
+		inter.placeCity(p);
+		this.saveModifiedToDB();
+		String message = new Gson().toJson(new TurnEvent.IntersectionChangeEvent(p, inter));
+		this.sendMessage(message);
+	}
+	
+	void pullCard(Player p) {
+		DevelopmentCard devCard = this.devCards.remove(0);
+		devCard.receive(p);
+		p.addCard(devCard);
+		this.saveModifiedToDB();
+		String message = new Gson().toJson(new TurnEvent.DevCardPullEvent(p));
+		this.sendMessage(message);
+	}
+	
+	public void addVictoryPoint(Player player) {
+		this.victoryPoints.addVictoryPoint(player);
+		this.saveModifiedToDB();
+	}
+	
+	public void moveAndRob(Hex movedToHex, Player robbingPlayer, Player robbedPlayer) {
+		CardType ct = robbedPlayer.getHand().popRandom();
+		robbingPlayer.getHand().addOne(ct);
+		this.hexes.setRobberHex(movedToHex);
+		this.saveModifiedToDB();
+		// TODO: robber message
+	}
+	
+	public void takeAll(CardType ct, Player player) {
+		int total = 0;
+		for (Player p : this.players)
+			if (p.getId() != player.getId())
+				total += p.getHand().takeAll(ct);
+		player.getHand().add(ct, total);
 	}
 	
 	/* Various Redis methods */
@@ -252,20 +320,26 @@ public class BoardModel {
 		client.hset(this.getRedisKey(), HEX_KEY, gson.toJson(this.hexes));
 		client.hset(this.getRedisKey(), HUMAN_PLAYERS_KEY, gson.toJson(this.humanPlayers));
 		client.hset(this.getRedisKey(), COMPUTER_PLAYERS_KEY, gson.toJson(this.computerPlayers));
+		client.hset(this.getRedisKey(), VP_KEY, gson.toJson(this.victoryPoints));
+		client.hset(this.getRedisKey(), DEV_CARD_KEY, gson.toJson(this.devCards));
 //		System.out.println(client.hgetAll(this.getRedisKey()));
 //		System.out.println(client.keys("*"));
 		System.out.println("Save successful");
 	}
 	
-	void saveModifiedToDB() {
+	void saveModifiedToDB() { 
 		Jedis client = CatanServer.getRedisClient();
+		Pipeline pipe = client.pipelined();
 		Gson gson = new Gson();
-		client.hset(this.getRedisKey(), TURN_KEY, String.valueOf(this.turnNumber));
-		client.hset(this.getRedisKey(), HAND_KEY, gson.toJson(this.handData));
-		client.hset(this.getRedisKey(), INTERSECTION_KEY, gson.toJson(this.intersections));
-		client.hset(this.getRedisKey(), EDGE_KEY, gson.toJson(this.edges));
-		client.hset(this.getRedisKey(), HUMAN_PLAYERS_KEY, gson.toJson(this.humanPlayers));
-		client.hset(this.getRedisKey(), COMPUTER_PLAYERS_KEY, gson.toJson(this.computerPlayers));
+		pipe.hset(this.getRedisKey(), TURN_KEY, String.valueOf(this.turnNumber));
+		pipe.hset(this.getRedisKey(), HAND_KEY, gson.toJson(this.handData));
+		pipe.hset(this.getRedisKey(), INTERSECTION_KEY, gson.toJson(this.intersections));
+		pipe.hset(this.getRedisKey(), EDGE_KEY, gson.toJson(this.edges));
+		pipe.hset(this.getRedisKey(), HUMAN_PLAYERS_KEY, gson.toJson(this.humanPlayers));
+		pipe.hset(this.getRedisKey(), COMPUTER_PLAYERS_KEY, gson.toJson(this.computerPlayers));
+		pipe.hset(this.getRedisKey(), VP_KEY, gson.toJson(this.victoryPoints));
+		pipe.hset(this.getRedisKey(), DEV_CARD_KEY, gson.toJson(this.devCards));
+		pipe.sync();
 //		System.out.println(client.hgetAll(this.getRedisKey()));
 //		System.out.println(client.keys("*"));
 		System.out.println("Save of modified successful");
@@ -285,6 +359,8 @@ public class BoardModel {
 		@Override
 		public void run() {
 			doSetupTurns();
+			// if we get here, keep going
+			doTurnLoop();
 		}
 		
 	}
@@ -305,8 +381,39 @@ public class BoardModel {
 				return;
 			// the CPU took care of the turn, so we save it now.
 			this.turnNumber++;
+			// TODO: consider trying to consolidate saves
 			this.saveModifiedToDB();
 		}
+	}
+	
+	public class RunTurnLoop implements Runnable {
+
+		@Override
+		public void run() {
+			doTurnLoop();
+		}
+		
+	}
+	
+	private void doTurnLoop() {
+		assert(this.turnNumber >= 0);
+		
+		Boolean hasPlayerWon = false;
+		int numPlayers = this.players.size();
+		Player player;
+				
+		do {
+			player = this.players.get(this.turnNumber % numPlayers);
+			this.notifyTurnStart(player.getId());
+			if (!player.doTurn())
+				return;
+			// the CPU took care of the turn, so we save it now.
+			this.turnNumber++;
+			// TODO: consider trying to consolidate saves
+			this.saveModifiedToDB();
+			hasPlayerWon = this.hasPlayerWon(player.getPlayerColor());
+		} while (!hasPlayerWon);
+		System.out.println(player.getPlayerColor().toString() + " has won the game!");
 	}
 	
 	public class RunRegisterListener implements Runnable {

@@ -104,10 +104,19 @@ public final class HexData implements DataContainer<Hex> {
 	private int maxWidth = 0;
 	private int minHeight = 0;
 	private int minWidth = 0;
+	private int robberHexId;
 	private transient BoardModel board;
 	
 	public BoardModel getBoard() {
 		return board;
+	}
+	
+	public Hex getRobberHex() {
+		return this.hexes.get(robberHexId);
+	}
+	
+	public void setRobberHex(Hex hex) {
+		this.robberHexId = hex.getId();
 	}
 	
 	private HexData(int radius, BoardModel board) {
@@ -226,7 +235,7 @@ public final class HexData implements DataContainer<Hex> {
 			}
 		}
 		
-		// more duplication of work here, but it is probably OK in a setup function like this
+		// more duplication of visits here, but it is probably OK in a setup function like this
 		HashSet<Integer> hexIds = new HashSet<Integer>();  // for debugging
 		// TODO: something is broken, probably here.
 		for (Hex hex : this.hexes.values()) {
@@ -234,8 +243,8 @@ public final class HexData implements DataContainer<Hex> {
 				Edge e = hex.getEdge(i);
 				if (!hexIds.add(e.getId()))
 					System.out.println("Already saw edge " + e.getId());
-				for (int j=i; j<i + 2; j++) {
-					Intersection inter = hex.getIntersection(j % 6);
+				for (int j=i-1; j<i + 1; j++) {
+					Intersection inter = hex.getIntersection((j + 6) % 6);  // avoid neg number mod
 					e.addIntersection(inter);
 					inter.addEdge(e);
 				}
@@ -294,11 +303,20 @@ public final class HexData implements DataContainer<Hex> {
 		}
 	}
 	
+	private static class JsonContainer {
+		private Hex[][] hexes;
+		private int robberHexId;
+		
+		JsonContainer(Hex[][] hexes, int robberHexId) {
+			this.hexes = hexes; this.robberHexId = robberHexId;
+		}
+	}
+	
 	public JsonElement toJson() {
 		GsonBuilder gsonB = new GsonBuilder();
 		gsonB.registerTypeAdapter(HexType.class, new HexTypeSerializer());
 		Gson gson = gsonB.create();
-		return gson.fromJson(gson.toJson(get2DHexArray()), JsonArray.class);
+		return gson.toJsonTree(new JsonContainer(this.get2DHexArray(), this.robberHexId));
 	}
 	
 	public String toString() {

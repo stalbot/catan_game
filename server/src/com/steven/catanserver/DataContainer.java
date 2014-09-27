@@ -14,10 +14,12 @@ public interface DataContainer<T extends DataContainer.Keyable> {
 	
 	public class KeyedRelation<T extends Keyable> {
 		
-		private DataContainer<T> data;
+		private transient DataContainer<T> data;
 		private transient ArrayList<T> cached;
 		private transient Boolean cacheOK = false;
-		HashSet<Integer> ids = new HashSet<Integer>();
+		// TODO: probably change this back to set, but good for debugging to know what order they were inserted in.
+		ArrayList<Integer> ids = new ArrayList<Integer>();
+//		HashSet<Integer> ids = new HashSet<Integer>();
 		
 		KeyedRelation(DataContainer<T> dc) {
 			this.setup(dc);
@@ -49,6 +51,9 @@ public interface DataContainer<T extends DataContainer.Keyable> {
 		}
 		
 		void add(T el) {
+			if (this.ids.contains(el.getId()))
+				// TODO: not needed if we go back to HashSet
+				return;
 			this.ids.add(el.getId());
 			cacheOK = false;
 		}

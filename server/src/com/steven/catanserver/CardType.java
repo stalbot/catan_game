@@ -8,4 +8,8 @@ public enum CardType {
 	String getName() {
 		return this.toString().toLowerCase();
 	}
+	
+	HarborType getHarborType() {
+		return HarborType.valueOf(this.toString());
+	}
 }

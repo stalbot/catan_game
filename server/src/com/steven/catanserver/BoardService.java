@@ -18,9 +18,25 @@ public class BoardService {
 		}
 	}
 	
-	private static String serializeBoard(BoardModel board) {
+	private static class HandSerializer implements JsonSerializer<HandData> {
+		private String userId;
+		
+		HandSerializer(String userId) {
+			this.userId = userId;
+		}
+		
+		@Override
+		public JsonElement serialize(HandData arg0, java.lang.reflect.Type arg1,
+				JsonSerializationContext arg2) {
+			return new Gson().toJsonTree(arg0);
+		}
+	}
+	
+	private static String serializeBoard(BoardModel board, String userId) {
 		GsonBuilder gson = new GsonBuilder();
+		// TODO: hide victory points and development cards
 		gson.registerTypeAdapter(HexData.class, new HexSerializer());
+		gson.registerTypeAdapter(HandData.class, new HandSerializer(userId));
 		return gson.create().toJson(new BoardContainer(board));
 	}
 	
@@ -38,12 +54,12 @@ public class BoardService {
 
 	public static String getBoardState(String boardId, String userId) {
 		BoardModel board = BoardModel.getFromDB(boardId);
-		return serializeBoard(board);
+		return serializeBoard(board, userId);
 	}
 	
 	public static String makeNewBoard(String userId, int numPlayers) {
 		BoardModel board = BoardModel.makeNewBoard(numPlayers, userId);
-		return serializeBoard(board);
+		return serializeBoard(board, userId);
 	}
 
 }

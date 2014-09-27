@@ -15,10 +15,7 @@ public class Edge implements DataContainer.Keyable {
 	private int id;
 	private PlayerColor color = null;
 	private transient EdgeData parent;
-	private DataContainer.KeyedRelation<Intersection> neighboringIntersections = 
-			(this.parent != null && this.neighboringIntersections == null) ?
-					new DataContainer.KeyedRelation<Intersection>(this.parent.getIntersectionData()) : 
-						null;
+	private DataContainer.KeyedRelation<Intersection> neighboringIntersections = null;
 	
 	Edge(int id, Collection<Hex> hexes) {
 		this.hexes = new HashSet<Hex>(hexes);

@@ -150,6 +150,7 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
     $scope.board = {};
     $scope.intersections = [];
     $scope.hexes = [];
+    $scope.gameMessages = [];
     $scope.hexColorMap = {
         ocean: '#0099FF',
         hill: '#AD5C33',
@@ -187,7 +188,7 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
 
     var refreshHexes = function(board) {
         // TODO: BREAK THIS UP!
-        // board.hexes is 2-d array
+        // board.hexes.hexes is 2-d array
         var hexDiameter = hexWidth * 2 * SQRT_3_INV,
             sideLength = hexDiameter / 2,
             hexExtra = sideLength / 2,
@@ -199,7 +200,8 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
             scopeEdges = [],
             harborLines = [];
 
-        angular.forEach(board.hexes, function(hexRow, i) {
+        var hexGrid = board.hexes.hexes;
+        angular.forEach(hexGrid, function(hexRow, i) {
             var allNulls = true;
             var trueIndex = i - rowDecrements,
                 sideOffset = (trueIndex % 2) ? 0 : hexWidth / 2,
@@ -282,8 +284,8 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
                     var edgeId = hex.edgeIds[index];
                     var edgeInfo = board.edges.edges[edgeId];
                     if (edgeInfo && edgeInfo.color) {
-                        var point1 = interArray[index];
-                        var point2 = interArray[(index + 1) % 6];
+                        var point1 = interArray[(index + 5) % 6];
+                        var point2 = interArray[(index + 6) % 6];
                         scopeEdges.push({
                             color: edgeInfo.color.toLowerCase(),
                             x1: point1.x,
@@ -298,8 +300,8 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
                 rowDecrements++;
         });
 
-        $scope.board.height = (board.hexes.length - rowDecrements) * hexAmortizedHeight + hexExtra + boardPadding;
-        $scope.board.width = (board.hexes[0].length + 1) * hexWidth + boardPadding;
+        $scope.board.height = (hexGrid.length - rowDecrements) * hexAmortizedHeight + hexExtra + boardPadding;
+        $scope.board.width = (hexGrid[0].length + 1) * hexWidth + boardPadding;
         $scope.hexes = scopeHexes;
         $scope.circles = scopeCircles;
         $scope.intersections = scopeIntersections;
@@ -312,17 +314,40 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
     };
 
     var handleMessage = function(message) {
-        if (message.eventType == 'INTERSECTION_CHANGE') {
+        var gameMessage = messageActions[message.eventType](message);
+        $scope.gameMessages.push(gameMessage);
+        $scope.$apply();
+
+        // not sure how to do this in angular
+        setTimeout(
+            function() {
+                $(".game-message-container").scrollTop($(".game-message-container")[0].scrollHeight);
+            },
+            25
+        );
+    };
+
+    var messageActions = {
+        TURN_SETUP_START: function(message) {
+            var player = message.player;
+            return 'Player ' + player.color + ' beginning setup turn.';
+        },
+        TURN_START: function(message) {
+            var player = message.player;
+            return 'Player ' + player.color + ' beginning turn.';
+        },
+        INTERSECTION_CHANGE: function(message) {
             var intersection = message.intersection;
             boardCache.intersections.intersections[intersection.id] = intersection;
             refreshHexes(boardCache);
-        }
-        if (message.eventType == 'EDGE_CHANGE') {
+            return 'Player ' + intersection.color + ' built a new ' + (intersection.isCity ? 'city' : 'settlement');
+        },
+        EDGE_CHANGE: function(message) {
             var edge = message.edge;
             boardCache.edges.edges[edge.id] = edge;
             refreshHexes(boardCache);
+            return 'Player ' + edge.color + ' built a new road';
         }
-        $scope.$apply();
     };
 
     var registerAndWait = function(board) {

@@ -4,12 +4,17 @@ public class ComputerPlayer extends Player {
 
 	public ComputerPlayer(PlayerColor pc, BoardModel board, int turnOrder) {
 		super(pc, board, turnOrder);
-		// TODO Auto-generated constructor stub
 	}
 
 	@Override
 	public Boolean doTurn() {
 		// TODO: implement
+		
+		// don't take down the system if this gets called.
+		try {
+			Thread.sleep(250);
+		} catch (InterruptedException e) {}
+		
 		return true;
 	}
 	
@@ -35,9 +40,43 @@ public class ComputerPlayer extends Player {
 			}
 		}
 		this.placeSettlement(bestInter);
+		
 		// totally stupid about this
 		this.placeRoad(bestInter.getEdges().iterator().next());
+		// for debugging
+//		for (Edge e : bestInter.getEdges())
+//			this.placeRoad(e);
+		
 		return true;
+	}
+
+	@Override
+	public TradeResponse repondToTrade(CardCollection askedFor, CardCollection offered, Boolean allowCounter) {
+		return TradeResponse.rejectTrade();
+	}
+
+	@Override
+	public RobberResponse doMoveRobber() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public CardType chooseMonopoly() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public CardType chooseResource() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean chooseRoadPlacement() {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 }
