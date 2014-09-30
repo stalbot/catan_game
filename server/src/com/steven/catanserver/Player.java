@@ -13,6 +13,7 @@ public abstract class Player {
 	private int turnOrder;
 	private HashMap<DevelopmentCard, Integer> devCards;
 	private DataContainer.KeyedRelation<Intersection> ownedIntersections = null;
+	private DataContainer.KeyedRelation<Edge> ownedEdges = null;
 	private transient HashSet<HarborType> harborsOwned;
 	public final transient Boolean isSync = true; 
 	
@@ -33,12 +34,24 @@ public abstract class Player {
 		return this.id;
 	}
 	
-	private DataContainer.KeyedRelation<Intersection> getOwnedIntersections() {
+	HashMap<DevelopmentCard, Integer> getDevCards() {
+		return this.devCards;
+	}
+	
+	protected DataContainer.KeyedRelation<Intersection> getOwnedIntersections() {
 		if (this.ownedIntersections == null)
 			this.ownedIntersections = new DataContainer.KeyedRelation<Intersection>(this.getBoard().getIntersectionData());
 		if (this.ownedIntersections.getRawData() == null)
 			this.ownedIntersections.setup(this.getBoard().getIntersectionData());
 		return this.ownedIntersections;
+	}
+	
+	private DataContainer.KeyedRelation<Edge> getOwnedEdges() {
+		if (this.ownedEdges == null)
+			this.ownedEdges = new DataContainer.KeyedRelation<Edge>(this.getBoard().getEdgeData());
+		if (this.ownedEdges.getRawData() == null)
+			this.ownedEdges.setup(this.getBoard().getEdgeData());
+		return this.ownedEdges;
 	}
 	
 	void setBoard(BoardModel bm) {
@@ -100,8 +113,8 @@ public abstract class Player {
 	
 	protected void placeSettlement(Intersection inter) {
 		this.getBoard().addVictoryPoint(this);
-		this.getBoard().placeSettlement(inter, this);
 		this.getOwnedIntersections().add(inter);
+		this.getBoard().placeSettlement(inter, this);
 	}
 	
 	public void buyRoad(Edge edge) {
@@ -110,6 +123,7 @@ public abstract class Player {
 	}
 	
 	protected void placeRoad(Edge edge) {
+		this.getOwnedEdges().add(edge);
 		this.getBoard().placeRoad(edge, this);
 	}
 	
@@ -129,6 +143,14 @@ public abstract class Player {
 		this.devCards.put(devCard, ++numCards);
 	}
 	
+	protected void doPlayCard(DevelopmentCard devCard) {
+		assert (this.devCards.get(devCard) > 0);
+		Integer curVal = this.devCards.get(devCard);
+		if (--curVal == 0)
+			this.devCards.remove(devCard);
+		this.devCards.put(devCard, --curVal);
+	}
+	
 	// intention for this: returns true if we should keep going, false means terminate,
 	// we are waiting on some non-CPU player to make a move
 	public abstract Boolean doTurn();
@@ -140,6 +162,12 @@ public abstract class Player {
 	public static class TradeResponse {
 		
 		public static TradeResponse rejectTrade() {
+			TradeResponse tr = new TradeResponse();
+			tr.wasRejected = true;
+			return tr;
+		}
+		
+		public static TradeResponse acceptTrade() {
 			return new TradeResponse();
 		}
 		
@@ -249,5 +277,9 @@ public abstract class Player {
 	
 	public abstract CardType chooseResource();
 	
-	public abstract boolean chooseRoadPlacement();
+	public abstract boolean chooseAndPlaceRoad();
+	
+	protected void doTradeWithSelf(CardType tradingIn, CardType gettingBack) {
+		this.getHand().subtract(tradingIn, this.getTradeRatio(tradingIn)).addOne(gettingBack);
+	}
 }

@@ -1,9 +1,10 @@
 package com.steven.catanserver;
 
 public enum HexType {
-	OCEAN(false), HILL, MOUNTAIN, FIELD, PASTURE, FOREST, DESERT(false);
+	OCEAN(false), HILL(CardType.BRICK), MOUNTAIN(CardType.ORE), FIELD(CardType.GRAIN), PASTURE(CardType.WOOL), FOREST(CardType.WOOD), DESERT(false);
 	
 	private Boolean hasNum = true;
+	private CardType yield = null;
 	
 	HexType() {}
 
@@ -11,8 +12,16 @@ public enum HexType {
 		this.hasNum = hasNum;
 	}
 	
+	HexType(CardType yield) {
+		this.yield = yield;
+	}
+	
 	Boolean hasRollNumber() {
 		return this.hasNum;
+	}
+	
+	CardType getCardType() {
+		return this.yield;
 	}
 	
 }

@@ -1,11 +1,13 @@
 package com.steven.catanserver;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 import com.google.gson.Gson;
@@ -91,9 +93,9 @@ public class BoardModel {
 		System.out.println("Making new board with " + numPlayers + " players");
 		BoardModel board = new BoardModel(numPlayers);
 		board.hexes = HexData.generateHexes(board);
-		HexData.EdgeIntersectionContainer eic = board.hexes.setupIntersections();
-		board.intersections = eic.intersectionData;
-		board.edges = eic.edgeData;
+		board.intersections = new IntersectionData(board);
+		board.edges = new EdgeData(board);
+		board.hexes.setupIntersections(board.intersections, board.edges);
 		board.id = UUID.randomUUID().toString();
 		board.devCards = DevelopmentCard.getNewDevCardStack();
 		
@@ -147,7 +149,9 @@ public class BoardModel {
 	private transient ArrayList<HumanPlayer> humanPlayers = new ArrayList<HumanPlayer>();
 	private transient ArrayList<ComputerPlayer> computerPlayers = new ArrayList<ComputerPlayer>();
 	private transient HashMap<String, Player> playerMap;
+	private transient HashMap<PlayerColor, Player> playersByColors;
 	private transient HandData handData;
+	private transient HashMap<Integer, Collection<Hex>> hexesByRollNum = null;
 	private VictoryPointData victoryPoints;
 	private List<DevelopmentCard> devCards;
 
@@ -213,6 +217,30 @@ public class BoardModel {
 	
 	public HandData getHandData() {
 		return this.handData;
+	}
+	
+	public int getRemainingDevCards() {
+		return this.devCards.size();
+	}
+	
+	private HashMap<Integer, Collection<Hex>> getHexesByRollNum() {
+		if (this.hexesByRollNum == null) {
+			this.hexesByRollNum = new HashMap<Integer, Collection<Hex>>();
+			for (Hex hex : this.getHexes()) {
+				if (this.hexesByRollNum.get(hex.getRollNumber()) == null)
+					this.hexesByRollNum.put(hex.getRollNumber(), new ArrayList<Hex>());
+				this.hexesByRollNum.get(hex.getRollNumber()).add(hex);
+			}
+		}
+		return this.hexesByRollNum;
+	}
+	
+	private HashMap<PlayerColor, Player> getPlayersByColors() {
+		if (this.playersByColors == null) {
+			for (Player p : this.players)
+				this.playersByColors.put(p.getPlayerColor(), p);
+		}
+		return this.playersByColors;
 	}
 	
 	/* Methods for players to modify the board */
@@ -404,6 +432,7 @@ public class BoardModel {
 				
 		do {
 			player = this.players.get(this.turnNumber % numPlayers);
+			this.doRollAndGrantCards();
 			this.notifyTurnStart(player.getId());
 			if (!player.doTurn())
 				return;
@@ -414,6 +443,21 @@ public class BoardModel {
 			hasPlayerWon = this.hasPlayerWon(player.getPlayerColor());
 		} while (!hasPlayerWon);
 		System.out.println(player.getPlayerColor().toString() + " has won the game!");
+	}
+	
+	private void doRollAndGrantCards() {
+		Random rand = new Random();
+		int rollNum = rand.nextInt(7) + rand.nextInt(7);
+		if (rollNum == 7) {
+			System.out.println("7 rolled, yay!"); // TODO
+			return;
+		}
+		for (Hex hex : this.getHexesByRollNum().get(rollNum))
+			for (Intersection inter : hex.getIntersections())
+				if (inter.getSettlementColor() != null) {
+					int numToAdd = inter.getIsCity() ? 2 : 1;
+					this.getPlayersByColors().get(inter.getSettlementColor()).getHand().add(hex.getType().getCardType(), numToAdd);
+				}
 	}
 	
 	public class RunRegisterListener implements Runnable {

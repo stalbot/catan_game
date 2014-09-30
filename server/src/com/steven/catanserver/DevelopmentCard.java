@@ -32,8 +32,8 @@ public enum DevelopmentCard {
 		// same as above
 		public Boolean play(Player player) {
 			// looks a little weird, but it is just choosing two resources, honoring clients
-			if (player.chooseRoadPlacement())
-				return player.chooseRoadPlacement();
+			if (player.chooseAndPlaceRoad())
+				return player.chooseAndPlaceRoad();
 			return false;
 		}
 	};

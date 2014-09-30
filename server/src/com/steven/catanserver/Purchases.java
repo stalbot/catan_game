@@ -11,7 +11,8 @@ public final class Purchases {
 	private static final int[] dCosti = {1, 1, 1};
 	
 	public enum PurchaseType {
-		SETTLEMENT(sCost, sCosti), CITY(cCost, cCosti), ROAD(rCost, rCosti), DEVELOPMENT_CARD(dCost, dCosti);
+		// Put these in sorted order of total cost as a convenience for AI.
+		CITY(cCost, cCosti), SETTLEMENT(sCost, sCosti), DEVELOPMENT_CARD(dCost, dCosti), ROAD(rCost, rCosti);
 
 		private CardCollection costs;
 

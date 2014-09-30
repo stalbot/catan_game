@@ -17,15 +17,30 @@ public final class Hex implements DataContainer.Keyable {
 	private int yPosition;
 	private int id;
 	private transient HexData parent;
-	
-	private ArrayList<Integer> edgeIds = new ArrayList<Integer>(6);
-	private ArrayList<Integer> interIds = new ArrayList<Integer>(6);
-	
 	private HarborType harborType = null;
-	private ArrayList<Integer> harborInterIds = null;
 	
-	private transient ArrayList<Edge> edges = new ArrayList<Edge>(6);
-	private transient ArrayList<Intersection> inters = new ArrayList<Intersection>(6); 
+	private DataContainer.KeyedRelation<Intersection> intersections = null;
+	private DataContainer.KeyedRelation<Edge> edges = null;
+	
+	private DataContainer.KeyedRelation<Intersection> getIntersectionsData() {
+		assert (this.parent != null);
+		if (this.intersections == null)
+			this.intersections = new DataContainer.KeyedRelation<Intersection>(this.parent.getBoard().getIntersectionData());
+		if (this.intersections.getRawData() == null)
+			// if this was instantiated from GSON
+			this.intersections.setup(this.parent.getBoard().getIntersectionData());
+		return this.intersections;
+	}
+	
+	private DataContainer.KeyedRelation<Edge> getEdgesData() {
+		assert (this.parent != null);
+		if (this.edges == null)
+			this.edges = new DataContainer.KeyedRelation<Edge>(this.parent.getBoard().getEdgeData());
+		if (this.edges.getRawData() == null)
+			// if this was instantiated from GSON
+			this.edges.setup(this.parent.getBoard().getEdgeData());
+		return this.edges;
+	}
 	
 	Hex(int id, Integer rollNumber, HexType hexType, int xPosition, int yPosition) {
 		this.rollNumber = rollNumber;
@@ -33,23 +48,22 @@ public final class Hex implements DataContainer.Keyable {
 		this.xPosition = xPosition;
 		this.yPosition = yPosition;
 		this.id = id;
-		for (int i=0; i<6; i++) {
-			this.edges.add(null); this.inters.add(null); this.edgeIds.add(null); this.interIds.add(null);
-		}
 	}
 	
 	public int getId() {
 		return this.id;
 	}
 	
+	public HexType getType() {
+		return this.hexType;
+	}
+	
 	void addEdge(Edge edge, int num) {
-		this.edgeIds.set(num, edge.getId());
-		this.edges.set(num, edge);
+		this.getEdgesData().set(num, edge);
 	}
 	
 	void addIntersection(Intersection inter, int num) {
-		this.interIds.set(num, inter.getId());
-		this.inters.set(num, inter);
+		this.getIntersectionsData().set(num, inter);
 	}
 	
 	HarborType getHarborType() {
@@ -139,22 +153,23 @@ public final class Hex implements DataContainer.Keyable {
 	}
 	
 	public Intersection getIntersection(int index) {
-		return this.inters.get(index);
+		return this.getIntersectionsData().getAll().get(index);
 	}
 
 	public List<Intersection> getIntersections() {
-		return this.inters;
+		return this.getIntersectionsData().getAll();
 	}
 	
 	public Edge getEdge(int index) {
-		return this.edges.get(index);
+		return this.getEdgesData().getAll().get(index);
 	}
 
 	public List<Edge> getEdges() {
-		return this.edges;
+		System.out.println("ids: " + this.getEdgesData().ids);
+		return this.getEdgesData().getAll();
 	}
 	
-	public int getRollNumber() {
+	public Integer getRollNumber() {
 		return this.rollNumber;
 	}
 	

@@ -121,5 +121,9 @@ public class Intersection implements DataContainer.Keyable {
 	public PlayerColor getSettlementColor() {
 		return this.color;
 	}
+	
+	public boolean getIsCity() {
+		return this.isCity;
+	}
 
 }

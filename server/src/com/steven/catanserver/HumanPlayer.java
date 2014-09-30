@@ -96,7 +96,7 @@ public class HumanPlayer extends Player {
 	}
 
 	@Override
-	public boolean chooseRoadPlacement() {
+	public boolean chooseAndPlaceRoad() {
 		// TODO Auto-generated method stub
 		return false;
 	}

@@ -257,7 +257,7 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
                 var interArray = getIntersectionsAsArray(points);
                 for (var index=0; index<6; index++) {
                     // this uniquely covers all relevant intersections on board
-                    var interId = hex.interIds[index];
+                    var interId = hex.intersections.ids[index];
                     var interInfo = board.intersections.intersections[interId];
                     var centerPoint = interArray[index];
                     // TODO: this is not working!
@@ -281,7 +281,7 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
                 }
                 angular.forEach([5, 0, 1], function(index) {
                     // this uniquely covers all relevant edges on board
-                    var edgeId = hex.edgeIds[index];
+                    var edgeId = hex.edges.ids[index];
                     var edgeInfo = board.edges.edges[edgeId];
                     if (edgeInfo && edgeInfo.color) {
                         var point1 = interArray[(index + 5) % 6];
