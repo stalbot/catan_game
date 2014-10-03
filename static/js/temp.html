@@ -7,13 +7,13 @@
                 stroke="black"
                 stroke-width="2px">
             </polygon>
-            <polygon ng-repeat="inter in intersections" ng-attr-points="{{ inter.points }}" ng-attr-fill="{{ inter.color }}">
-            </polygon>
             <line ng-repeat="edge in edges"
                 ng-attr-x1="{{ edge.x1 }}" ng-attr-x2="{{ edge.x2 }}"
                 ng-attr-y1="{{ edge.y1 }}" ng-attr-y2="{{ edge.y2 }}"
                 ng-attr-stroke="{{ edge.color }}" stroke-width="5px">
             </line>
+            <polygon ng-repeat="inter in intersections" ng-attr-points="{{ inter.points }}" ng-attr-fill="{{ inter.color }}">
+            </polygon>
 
             <line ng-repeat="line in harborLines"
                 ng-attr-x1="{{ line.x1 }}" ng-attr-x2="{{ line.x2 }}"
