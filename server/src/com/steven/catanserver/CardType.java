@@ -3,7 +3,7 @@ package com.steven.catanserver;
 import java.util.HashMap;
 
 public enum CardType {
-	WOOL, GRAIN, WOOD, BRICK, ORE;
+	SHEEP, WHEAT, WOOD, BRICK, ORE;
 
 	String getName() {
 		return this.toString().toLowerCase();

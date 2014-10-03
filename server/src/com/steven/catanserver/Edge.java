@@ -1,24 +1,20 @@
 package com.steven.catanserver;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
+import java.util.*;
 
 public class Edge implements DataContainer.Keyable {
-	
-	private transient HashSet<Hex> hexes;
-	
-	private transient HashMap<Integer, Intersection> intersections = null;
 	
 	private int id;
 	private PlayerColor color = null;
 	private transient EdgeData parent;
 	private DataContainer.KeyedRelation<Intersection> neighboringIntersections = null;
+	private DataContainer.KeyedRelation<Hex> neighboringHexes = null;
 	
-	Edge(int id, Collection<Hex> hexes) {
-		this.hexes = new HashSet<Hex>(hexes);
+	Edge(int id, Collection<Hex> hexes, EdgeData parent) {
+		this.parent = parent;
+		for (Hex hex : hexes)
+			if (hex != null)
+				this.getNeighboringHexes().add(hex);
 		this.id = id;
 	}
 	
@@ -30,10 +26,23 @@ public class Edge implements DataContainer.Keyable {
 			this.neighboringIntersections.setup(this.parent.getIntersectionData());
 		return this.neighboringIntersections;
 	}
+	
+	private DataContainer.KeyedRelation<Hex> getNeighboringHexes() {
+		assert (this.parent != null);
+		if (this.neighboringHexes == null)
+			this.neighboringHexes = new DataContainer.KeyedRelation<Hex>(this.parent.getBoard().getHexData());
+		if (this.neighboringHexes.getRawData() == null)
+			this.neighboringHexes.setup(this.parent.getBoard().getHexData());
+		return this.neighboringHexes;
+	}
 
 	public int getId() {
 		// TODO Auto-generated method stub
 		return this.id;
+	}
+	
+	Iterable<Hex> getHexes() {
+		return this.getNeighboringHexes().getAll();
 	}
 	
 	Iterable<Intersection> getIntersections() {
@@ -47,9 +56,19 @@ public class Edge implements DataContainer.Keyable {
 	void setParent(EdgeData edged) {
 		this.parent = edged;
 	}
+	
+	public boolean canPlaceRoad() {
+		if (this.color != null)
+			return false;
+		for (Hex hex : this.getNeighboringHexes().getAll())
+			if (hex.getType() != HexType.OCEAN)
+				return true;
+		return false;
+	}
 
 	public void placeRoad(Player player) {
-		System.out.println("Placing road on edge " + this.getId() + " with intersection neighbors " + this.getNeighboringIntersections().ids);
+		assert (this.canPlaceRoad());
+//		System.out.println("Placing road on edge " + this.getId() + " with intersection neighbors " + this.getNeighboringIntersections().ids);
 		this.color = player.getPlayerColor();
 	}
 	

@@ -41,4 +41,8 @@ public class EdgeData implements DataContainer<Edge> {
 		return this.board.getIntersectionData();
 	}
 	
+	BoardModel getBoard() {
+		return this.board;
+	}
+	
 }

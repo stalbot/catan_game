@@ -110,12 +110,15 @@ public class BoardModel {
 		for (int i=numHumans; i<numPlayers; i++) {
 			board.addComputerPlayer(new ComputerPlayer(PlayerColor.values()[i], board, turnOrders.remove()));
 		}
+		board.handData = new HandData(board.players);
 		board.victoryPoints = new VictoryPointData(VPS_TO_WIN, board.players);
 		board.turnNumber = -2 * numPlayers;
 		
 		board.saveToDB();
 		return board;
 	}
+	
+	
 	
 	public void startSetup() {
 		new Thread(new RunSetup()).start();
@@ -177,6 +180,10 @@ public class BoardModel {
 	Player getPlayer(String playerId) {
 		return this.playerMap.get(playerId);
 	}
+	
+	List<Player> getPlayers() {
+		return this.players;
+	}
 
 	public BoardModel(int numPlayers) {
 		this.players = new ArrayList<Player>(numPlayers);
@@ -237,6 +244,7 @@ public class BoardModel {
 	
 	private HashMap<PlayerColor, Player> getPlayersByColors() {
 		if (this.playersByColors == null) {
+			this.playersByColors = new HashMap<PlayerColor, Player>();
 			for (Player p : this.players)
 				this.playersByColors.put(p.getPlayerColor(), p);
 		}
@@ -447,11 +455,12 @@ public class BoardModel {
 	
 	private void doRollAndGrantCards() {
 		Random rand = new Random();
-		int rollNum = rand.nextInt(7) + rand.nextInt(7);
+		int rollNum = (rand.nextInt(6) + 1) + (rand.nextInt(6) + 1);
 		if (rollNum == 7) {
 			System.out.println("7 rolled, yay!"); // TODO
 			return;
 		}
+		System.out.println(rollNum + " was rolled");
 		for (Hex hex : this.getHexesByRollNum().get(rollNum))
 			for (Intersection inter : hex.getIntersections())
 				if (inter.getSettlementColor() != null) {

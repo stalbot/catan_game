@@ -8,13 +8,15 @@ public interface DataContainer<T extends DataContainer.Keyable> {
 	
 	T getElement(Integer id);
 	
+	void finalizeFromDB(BoardModel board);
+	
 	public interface Keyable {
 		int getId();
 	}
 	
 	public class KeyedRelation<T extends Keyable> {
 		
-		private transient DataContainer<T> data;
+		private transient DataContainer<T> data = null;
 		private transient ArrayList<T> cached;
 		private transient Boolean cacheOK = false;
 		ArrayList<Integer> ids = new ArrayList<Integer>();

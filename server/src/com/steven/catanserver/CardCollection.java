@@ -7,6 +7,9 @@ import java.util.LinkedList;
 import java.util.Random;
 import java.util.Map.Entry;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 public class CardCollection {
 
 	private HashMap<CardType, Integer> cardCounts;
@@ -38,7 +41,7 @@ public class CardCollection {
 	
 	public Boolean canPurchase(CardCollection cards) {
 		for (Entry<CardType, Integer> e : cards.getCards().entrySet()) {
-			Integer numCards = this.cardCounts.get(e.getValue());
+			Integer numCards = this.cardCounts.get(e.getKey());
 			if (numCards == null)
 				return false;
 			if (e.getValue() > numCards)
@@ -130,14 +133,19 @@ public class CardCollection {
 		ArrayList<CardType> cts = new ArrayList<CardType>();
 		for (Entry<CardType, Integer> e : this.cardCounts.entrySet()) {
 			int value = (e.getValue() == null) ? 0 : e.getValue();
-			if (value == minVal)
-				cts.add(e.getKey());
-			else if (minVal == null || value < minVal) {
+			if (minVal == null || value < minVal) {
 				minVal = value;
 				cts.clear();
 				cts.add(e.getKey());
 			}
+			else if (value == minVal)
+				cts.add(e.getKey());
 		}
 		return cts;
+	}
+	
+	public String toString() {
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		return gson.toJson(this.cardCounts).toString();
 	}
 }

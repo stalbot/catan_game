@@ -11,7 +11,7 @@ public abstract class Player {
 	private transient BoardModel board;
 	private String id = null;
 	private int turnOrder;
-	private HashMap<DevelopmentCard, Integer> devCards;
+	private HashMap<DevelopmentCard, Integer> devCards = new HashMap<DevelopmentCard, Integer>();
 	private DataContainer.KeyedRelation<Intersection> ownedIntersections = null;
 	private DataContainer.KeyedRelation<Edge> ownedEdges = null;
 	private transient HashSet<HarborType> harborsOwned;
@@ -46,7 +46,7 @@ public abstract class Player {
 		return this.ownedIntersections;
 	}
 	
-	private DataContainer.KeyedRelation<Edge> getOwnedEdges() {
+	protected DataContainer.KeyedRelation<Edge> getOwnedEdges() {
 		if (this.ownedEdges == null)
 			this.ownedEdges = new DataContainer.KeyedRelation<Edge>(this.getBoard().getEdgeData());
 		if (this.ownedEdges.getRawData() == null)
@@ -101,7 +101,7 @@ public abstract class Player {
 	}
 	
 	protected void placeCity(Intersection inter) {
-		assert (inter.canPlaceCity() && inter.getSettlementColor() == this.getPlayerColor());
+		assert (inter.canPlaceCity() && inter.getSettlementColor() != null && inter.getSettlementColor()  == this.getPlayerColor());
 		this.getBoard().addVictoryPoint(this);
 		this.getBoard().placeCity(inter, this);
 	}

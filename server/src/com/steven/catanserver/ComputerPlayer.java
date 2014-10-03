@@ -16,6 +16,8 @@ public class ComputerPlayer extends Player {
 	static final int HARBOR_ADJUSTMENT = 2;
 	static final HashMap<CardType, Integer> maximumCardsInPurchase = new HashMap<CardType, Integer>();
 	
+	private static final int MINIMUM_MONOPOLY_CARDS = 2; 
+	
 	static {
 		for (CardType ct : CardType.values()) {
 			int maxVal = 0;
@@ -64,7 +66,7 @@ public class ComputerPlayer extends Player {
 	
 	private void doAllPossiblePurchases() {
 		List<List<Purchases.PurchaseType>> allPts = this.getPossiblePurchases();
-		ArrayList<Object> results = new ArrayList<Object>();
+		ArrayList<Object> results;
 		int bestSpend = 0;
 		List<PurchaseType> bestPurchases = null;
 		List<Object> bestResults = null;
@@ -72,34 +74,31 @@ public class ComputerPlayer extends Player {
 			boolean canFulfillPurchases = true;
 			int totalCardsSpent = 0;
 			Collections.sort(purchases, new PurchaseTypeEffectSorter());
+			results = new ArrayList<Object>();
 			for (PurchaseType pt : purchases) {
 				totalCardsSpent += pt.getPrice().getTotalCards();
 				Object result = null;
 				switch(pt) {
 				case DEVELOPMENT_CARD:
-					if (this.getBoard().getRemainingDevCards() == 0)
-						canFulfillPurchases = false;
+					if (this.getBoard().getRemainingDevCards() > 0)
+						result = true;
 					break;
 				case SETTLEMENT:
 					result = this.getBestIntersectionForSettlement();
-					if (result == null)
-						canFulfillPurchases = false;
 					break;
 				case CITY:
 					result = this.getBestIntersectionForCity();
-					if (result == null)
-						canFulfillPurchases = false;
 					break;
 				case ROAD:
 					result = this.chooseRoadLocation();
-					if (result == null)
-						canFulfillPurchases = false;
+					assert (result == null || ((Edge) result).canPlaceRoad());
 					break;
 				}
-				if (!canFulfillPurchases)
-					break;
+				if (result == null)
+					canFulfillPurchases = false;
 				results.add(result);
 			}
+			assert(purchases.size() == results.size());
 			if (canFulfillPurchases) {
 				this.executePurchases(purchases, results);
 				return;
@@ -120,18 +119,23 @@ public class ComputerPlayer extends Player {
 	private void executePurchases(List<PurchaseType> purchases, List<Object> results) {
 		assert(purchases.size() == results.size());
 		for (int i=0, k=purchases.size(); i<k; i++) {
+			Object purchaseObj = results.get(i);
+			if (purchaseObj == null)
+				// We weren't able to complete this purchase, but this is the best set we've got.
+				continue;
 			switch(purchases.get(i)) {
 			case DEVELOPMENT_CARD:
 				this.buyDevCard();
 				break;
 			case SETTLEMENT:
-				this.buySettlement((Intersection) results.get(i));
+				this.buySettlement((Intersection) purchaseObj);
 				break;
 			case CITY:
-				this.buyCity((Intersection) results.get(i));
+				this.buyCity((Intersection) purchaseObj);
 				break;
 			case ROAD:
-				this.buyRoad((Edge) results.get(i));
+				assert(((Edge) purchaseObj).canPlaceRoad());
+				this.buyRoad((Edge) purchaseObj);
 				break;
 			}
 		}
@@ -139,10 +143,14 @@ public class ComputerPlayer extends Player {
 
 	@Override
 	public Boolean doTurn() {
+		System.out.println(this.getPlayerColor() + " starting turn.");
+		System.out.println(this.getHand());
+		
 		this.doAllPossiblePurchases();
 		
+		// For each card in hand, trade down if possible to the maximum amount we can spend on single purchase.
 		for (Entry<CardType, Integer> ctEntry : this.getHand().getCards().entrySet()) {
-			while (this.getTradeRatio(ctEntry.getKey()) + maximumCardsInPurchase.get(ctEntry.getKey()) >= ctEntry.getValue()) {
+			while (this.getTradeRatio(ctEntry.getKey()) + maximumCardsInPurchase.get(ctEntry.getKey()) <= ctEntry.getValue()) {
 				CardType tradeTarget = this.getHand().getLeastCommonCards().iterator().next();
 				this.doTradeWithSelf(ctEntry.getKey(), tradeTarget);
 			}
@@ -225,22 +233,78 @@ public class ComputerPlayer extends Player {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	private class CardSorter implements Comparator<Entry<CardType, Integer>> {
+
+		@Override
+		public int compare(Entry<CardType, Integer> arg0,
+				Entry<CardType, Integer> arg1) {
+			return arg0.getValue() - arg1.getValue();
+		}
+		
+	}
+	
+	protected List<Entry<CardType, Integer>> getOtherPlayerCardTotalsSorted() {
+		HashMap<CardType, Integer> counts = new HashMap<CardType, Integer>();
+		for (Player p : this.getBoard().getPlayers()) {
+			if (p.getPlayerColor() == this.getPlayerColor())
+				continue;
+			for (Entry<CardType, Integer> e : p.getHand().getCards().entrySet()) {
+				if (!counts.containsKey(e.getKey()))
+					counts.put(e.getKey(), 0);
+				counts.put(e.getKey(), counts.get(e.getKey()) + e.getValue());
+			}
+		}
+		ArrayList<Entry<CardType, Integer>> cardCounts = new ArrayList<Entry<CardType, Integer>>(counts.entrySet());
+		Collections.sort(cardCounts, new CardSorter());
+		Collections.reverse(cardCounts);
+		return cardCounts;
+	}
 
 	@Override
 	public CardType chooseMonopoly() {
-		// TODO Auto-generated method stub
-		return null;
+		List<Entry<CardType, Integer>> cardCounts =  this.getOtherPlayerCardTotalsSorted();
+		if (cardCounts.size() == 0)
+			return null;
+		Entry<CardType, Integer> bestChoice = cardCounts.get(0);
+		if (bestChoice.getValue() < MINIMUM_MONOPOLY_CARDS)
+			return null;
+		return bestChoice.getKey();
 	}
 
 	@Override
 	public CardType chooseResource() {
-		// TODO Auto-generated method stub
-		return null;
+		// also being dumb, this is the dumb AI after all.
+		return this.getHand().getLeastCommonCards().iterator().next();
+	}
+	
+	protected Collection<Edge> getPossibleRoadPlacements() {
+		LinkedList<Edge> edges = new LinkedList<Edge>();
+		for (Edge e : this.getOwnedEdges().getAll())
+			for (Intersection i : e.getIntersections())
+				if (i.getSettlementColor() == null || i.getSettlementColor() == this.getPlayerColor())
+					for (Edge eNeighbor : i.getAllNeighboringEdges())
+						if (eNeighbor.canPlaceRoad())
+							edges.add(eNeighbor);
+		return edges;
 	}
 	
 	protected Edge chooseRoadLocation() {
-		// TODO: implement
-		return null;
+		// yes, not the most efficient, but this is the dumb one
+		Edge anyEdge = null;
+		// basically, go through all the edges on which we can place a road,
+		// if we find one that could lead to a settlement being placed, do that
+		// otherwise just return anything. (or null, if we found no placements)
+		for (Edge e : this.getPossibleRoadPlacements()) {
+			boolean neighborsSettlement = false;
+			for (Intersection i : e.getIntersections())
+				if (!i.canPlaceSettlement())
+					neighborsSettlement = true;
+			if (!neighborsSettlement)
+				return e;
+			anyEdge = e;
+		}
+		return anyEdge;
 	}
 
 	@Override

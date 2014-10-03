@@ -1,9 +1,6 @@
 package com.steven.catanserver;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 public class Intersection implements DataContainer.Keyable {
 	
@@ -12,7 +9,6 @@ public class Intersection implements DataContainer.Keyable {
 	private transient HashSet<Hex> hexes = null;
 	private Boolean isCity = false;
 	private PlayerColor color = null;
-	private transient Player player;
 	private HarborType harborType;
 	private transient HashMap<Integer, Intersection> neighborIntersections = null;
 	private transient IntersectionData parent;
@@ -81,7 +77,11 @@ public class Intersection implements DataContainer.Keyable {
 		return this.color != null;
 	}
 	
-	private HashMap<Integer, Intersection> getNeighborIntersections() {
+	public List<Edge> getAllNeighboringEdges() {
+		return this.getNeighboringEdges().getAll();
+	}
+	
+	public HashMap<Integer, Intersection> getNeighborIntersections() {
 		if (this.neighborIntersections == null) {
 			this.neighborIntersections = new HashMap<Integer, Intersection>(3);
 			for (Edge e : this.getEdges())

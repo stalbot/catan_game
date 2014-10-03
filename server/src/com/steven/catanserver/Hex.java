@@ -121,12 +121,7 @@ public final class Hex implements DataContainer.Keyable {
 				ret = k;
 			}
 		}
-//			System.out.println("xPos: " + this.xPosition + ", yPos: " + this.yPosition + 
-//					" dirs: " + Hex.directions[ret][0] + "," + Hex.directions[ret][1]);
-    	// Should never ever happen
-		assert(false);
-		if (ret < 0)
-			System.out.println("Bad stuff in getDirectionToCenter()");
+		assert(ret >= 0);
 		return ret;
 	}
 	

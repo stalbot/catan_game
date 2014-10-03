@@ -208,8 +208,6 @@ public final class HexData implements DataContainer<Hex> {
 //					System.out.println("k: " + k + " direction " + harborDirection);
 				}
 				// Create a new intersection only if we didn't find it before.
-				if (hex.getId() == 3)
-					System.out.println("starting badness");
 				if (inter == null) {
 					inter = new Intersection(++interIdCounter);
 					interData.addIntersection(inter);
@@ -224,7 +222,7 @@ public final class HexData implements DataContainer<Hex> {
 				edgeCacheKey.remove(neighbor2); // meh...
 				Edge edge = edgeCache.get(edgeCacheKey);
 				if (edge == null) {
-					edge = new Edge(++edgeIdCounter, edgeCacheKey);
+					edge = new Edge(++edgeIdCounter, edgeCacheKey, edgeData);
 					if (neighbor2 != null)
 						edgeCache.put(edgeCacheKey, edge);
 					edgeData.addEdge(edge);
@@ -337,6 +335,8 @@ public final class HexData implements DataContainer<Hex> {
 
 	public void finalizeFromDB(BoardModel board) {
 		this.board = board;
+		for (Hex hex : this.hexes.values())
+			hex.setParent(this);
 	}
 
 	@Override
