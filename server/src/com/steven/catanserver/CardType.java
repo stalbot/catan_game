@@ -1,7 +1,5 @@
 package com.steven.catanserver;
 
-import java.util.HashMap;
-
 public enum CardType {
 	SHEEP, WHEAT, WOOD, BRICK, ORE;
 

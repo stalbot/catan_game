@@ -52,20 +52,28 @@ public interface DataContainer<T extends DataContainer.Keyable> {
 			return ret;
 		}
 		
-		void add(T el) {
-			if (!this.idsSet.add(el.getId()))
+		void add(int elId) {
+			if (!this.idsSet.add(elId))
 				return;
-			this.ids.add(el.getId());
+			this.ids.add(elId);
 			cacheOK = false;
 		}
 		
+		void add(T el) {
+			this.add(el.getId());
+		}
+		
 		void set(int index, T el) {
+			this.set(index, el.getId());
+		}
+		
+		void set(int index, int elId) {
 			// TODO: allow this to move an existing element around?
-			if (!this.idsSet.add(el.getId()))
+			if (!this.idsSet.add(elId))
 				return;
 			while (this.ids.size() < index + 1)
 				this.ids.add(null);
-			this.ids.set(index, el.getId());
+			this.ids.set(index, elId);
 			cacheOK = false;
 		}
 	}

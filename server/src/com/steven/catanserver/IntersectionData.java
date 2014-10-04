@@ -1,19 +1,25 @@
 package com.steven.catanserver;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.*;
+import java.util.Map.Entry;
 
 public class IntersectionData implements DataContainer<Intersection> {
 
 	private HashMap<Integer, Intersection> intersections = new HashMap<Integer, Intersection>();
-	private transient BoardModel board;
+	private transient Board board;
 	
-	IntersectionData(BoardModel board) {
+	IntersectionData(Board board) {
 		this.board = board;
 	}
 	
-	BoardModel getBoard() {
+	IntersectionData(Board board, IntersectionData toCopy) {
+		this.board = board;
+		this.intersections = new HashMap<Integer, Intersection>();
+		for (Entry<Integer, Intersection> e : toCopy.intersections.entrySet())
+			this.intersections.put(e.getKey(), new Intersection(e.getValue()));
+	}
+	
+	Board getBoard() {
 		return this.board;
 	}
 	

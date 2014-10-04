@@ -8,7 +8,7 @@ import java.util.UUID;
 public abstract class Player {
 	
 	private PlayerColor color;
-	private transient BoardModel board;
+	private transient Board board;
 	private String id = null;
 	private int turnOrder;
 	private HashMap<DevelopmentCard, Integer> devCards = new HashMap<DevelopmentCard, Integer>();
@@ -17,17 +17,21 @@ public abstract class Player {
 	private transient HashSet<HarborType> harborsOwned;
 	public final transient Boolean isSync = true; 
 	
-	Player(PlayerColor pc, BoardModel board, int turnOrder) {
+	Player(PlayerColor pc, Board board, int turnOrder) {
 		this(pc, board, turnOrder, null);
 	}
 	
-	Player(PlayerColor pc, BoardModel board, int turnOrder, String id) {
+	Player(PlayerColor pc, Board board, int turnOrder, String id) {
 		this.color = pc;
 		this.board = board;
 		this.turnOrder = turnOrder;
 		if (id == null)
 			id = UUID.randomUUID().toString();
 		this.id = id;
+	}
+	
+	Player(Board board, Player p) {
+		this(p.getPlayerColor(), board, p.getTurnOrder(), p.getId());
 	}
 
 	String getId() {
@@ -79,12 +83,16 @@ public abstract class Player {
 		return HarborType.DEFAULT_TRADE_RATIO;		
 	}
 	
-	BoardModel getBoard() {
+	Board getBoard() {
 		return this.board;
 	}
 	
 	int getTurnOrder() {
 		return this.turnOrder;
+	}
+	
+	void setTurnOrder(int turnNum) {
+		this.turnOrder = turnNum;
 	}
 	
 	CardCollection getHand() {
@@ -95,36 +103,35 @@ public abstract class Player {
 		return this.color;
 	}
 	
-	public void buyCity(Intersection inter) {
+	public void buyCity(int interId) {
 		this.getHand().subtract(Purchases.PurchaseType.CITY.getPrice());
-		this.placeCity(inter);
+		this.placeCity(interId);
 	}
 	
-	protected void placeCity(Intersection inter) {
-		assert (inter.canPlaceCity() && inter.getSettlementColor() != null && inter.getSettlementColor()  == this.getPlayerColor());
+	protected void placeCity(int interId) {
 		this.getBoard().addVictoryPoint(this);
-		this.getBoard().placeCity(inter, this);
+		this.getBoard().placeCity(interId, this.getPlayerColor());
 	}
 	
-	public void buySettlement(Intersection inter) {
+	public void buySettlement(int interId) {
 		this.getHand().subtract(Purchases.PurchaseType.SETTLEMENT.getPrice());
-		this.placeSettlement(inter);
+		this.placeSettlement(interId);
 	}
 	
-	protected void placeSettlement(Intersection inter) {
+	protected void placeSettlement(int interId) {
 		this.getBoard().addVictoryPoint(this);
-		this.getOwnedIntersections().add(inter);
-		this.getBoard().placeSettlement(inter, this);
+		this.getOwnedIntersections().add(interId);
+		this.getBoard().placeSettlement(interId, this.getPlayerColor());
 	}
 	
-	public void buyRoad(Edge edge) {
+	public void buyRoad(int edgeId) {
 		this.getHand().subtract(Purchases.PurchaseType.ROAD.getPrice());
-		this.placeRoad(edge);
+		this.placeRoad(edgeId);
 	}
 	
-	protected void placeRoad(Edge edge) {
-		this.getOwnedEdges().add(edge);
-		this.getBoard().placeRoad(edge, this);
+	protected void placeRoad(int edgeId) {
+		this.getOwnedEdges().add(edgeId);
+		this.getBoard().placeRoad(edgeId, this.getPlayerColor());
 	}
 	
 	public void buyDevCard() {
@@ -203,6 +210,10 @@ public abstract class Player {
 		CardCollection getCounterOffer() {
 			return this.counterOffer;
 		}
+		
+		String getMessage() {
+			return this.message;
+		}
 	}
 	
 	public Boolean askForTrade(Player partner, CardCollection askedFor, CardCollection offered) {
@@ -246,6 +257,7 @@ public abstract class Player {
 	public Boolean moveRobber() {
 		Hex oldHex = this.getBoard().getHexData().getRobberHex();
 		RobberResponse rr = this.doMoveRobber();
+		assert(oldHex.getId() != rr.movedToHex.getId());
 		if (!rr.shouldContinue)
 			// HumanPlayer
 			return false;

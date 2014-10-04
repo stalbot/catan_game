@@ -37,10 +37,14 @@ public class ComputerPlayer extends Player {
 		return cardVal;
 	}
 	
-	public ComputerPlayer(PlayerColor pc, BoardModel board, int turnOrder) {
+	public ComputerPlayer(PlayerColor pc, Board board, int turnOrder) {
 		super(pc, board, turnOrder);
 	}
 	
+	public ComputerPlayer(Board fake, ComputerPlayer cp) {
+		super(fake, cp);
+	}
+
 	protected static class PurchaseTypeEffectSorter implements Comparator<PurchaseType> {
 		/* 
 		 * Sorts purchase types based on the order at which they will effect each other on the board.
@@ -66,32 +70,35 @@ public class ComputerPlayer extends Player {
 	
 	private void doAllPossiblePurchases() {
 		List<List<Purchases.PurchaseType>> allPts = this.getPossiblePurchases();
-		ArrayList<Object> results;
+		ArrayList<Integer> results;
 		int bestSpend = 0;
 		List<PurchaseType> bestPurchases = null;
-		List<Object> bestResults = null;
+		List<Integer> bestResults = null;
 		for (List<PurchaseType> purchases : allPts) {
+			Board fakeBoard = Board.makeFakeBoard(this.getBoard());
+			ComputerPlayer fakePlayer = (ComputerPlayer) (fakeBoard.getPlayerByColor(this.getPlayerColor()));
 			boolean canFulfillPurchases = true;
 			int totalCardsSpent = 0;
 			Collections.sort(purchases, new PurchaseTypeEffectSorter());
-			results = new ArrayList<Object>();
+			results = new ArrayList<Integer>();
 			for (PurchaseType pt : purchases) {
 				totalCardsSpent += pt.getPrice().getTotalCards();
-				Object result = null;
+				Integer result = null;
 				switch(pt) {
 				case DEVELOPMENT_CARD:
-					if (this.getBoard().getRemainingDevCards() > 0)
-						result = true;
+					if (fakeBoard.getDevCards().size() > 0) {
+						result = 1;  // id doesn't mattter, just not null
+						fakeBoard.getDevCards().remove(0);
+					}
 					break;
 				case SETTLEMENT:
-					result = this.getBestIntersectionForSettlement();
+					result = this.getBestIntersectionForSettlement(false, fakeBoard, fakePlayer);
 					break;
 				case CITY:
-					result = this.getBestIntersectionForCity();
+					result = this.getBestIntersectionForCity(fakeBoard, fakePlayer);
 					break;
 				case ROAD:
-					result = this.chooseRoadLocation();
-					assert (result == null || ((Edge) result).canPlaceRoad());
+					result = this.chooseRoadLocation(fakeBoard, fakePlayer);
 					break;
 				}
 				if (result == null)
@@ -116,11 +123,11 @@ public class ComputerPlayer extends Player {
 		}
 	}
 	
-	private void executePurchases(List<PurchaseType> purchases, List<Object> results) {
+	private void executePurchases(List<PurchaseType> purchases, List<Integer> results) {
 		assert(purchases.size() == results.size());
 		for (int i=0, k=purchases.size(); i<k; i++) {
-			Object purchaseObj = results.get(i);
-			if (purchaseObj == null)
+			Integer purchaseObjId = results.get(i);
+			if (purchaseObjId == null)
 				// We weren't able to complete this purchase, but this is the best set we've got.
 				continue;
 			switch(purchases.get(i)) {
@@ -128,14 +135,13 @@ public class ComputerPlayer extends Player {
 				this.buyDevCard();
 				break;
 			case SETTLEMENT:
-				this.buySettlement((Intersection) purchaseObj);
+				this.buySettlement(purchaseObjId);
 				break;
 			case CITY:
-				this.buyCity((Intersection) purchaseObj);
+				this.buyCity(purchaseObjId);
 				break;
 			case ROAD:
-				assert(((Edge) purchaseObj).canPlaceRoad());
-				this.buyRoad((Edge) purchaseObj);
+				this.buyRoad(purchaseObjId);
 				break;
 			}
 		}
@@ -172,24 +178,47 @@ public class ComputerPlayer extends Player {
 		return getTotalProbability(inter) + (inter.getHarbor() != null ? HARBOR_ADJUSTMENT : 0);
 	}
 	
-	Intersection getBestIntersectionForCity() {
+	Integer getBestIntersectionForCity() {
+		return this.getBestIntersectionForCity(this.getBoard(), this, false);
+	}
+	
+	Integer getBestIntersectionForCity(Board fakeBoard, ComputerPlayer fakePlayer) {
+		return this.getBestIntersectionForCity(fakeBoard, fakePlayer, true);
+	}
+	
+	Integer getBestIntersectionForCity(Board board, ComputerPlayer cp, boolean modifyBoard) {
 		int maxProb = 0;
 		Intersection bestInter = null;
-		for (Intersection inter : this.getOwnedIntersections().getAll()) {
+		for (Intersection inter : cp.getOwnedIntersections().getAll()) {
 			// For cities, harbors don't matter, don't adjust.
 			int currentProb = getTotalProbability(inter);
-			if (currentProb >  maxProb && inter.canPlaceSettlement()) {
+			if (inter.canPlaceCity() && currentProb >  maxProb) {
 				maxProb = currentProb;
 				bestInter = inter;
 			}
 		}
-		return bestInter;
+		if (modifyBoard && bestInter != null) 
+			cp.placeCity(bestInter.getId());
+		return (bestInter != null) ? bestInter.getId() : null;
 	}
 	
-	Intersection getBestIntersectionForSettlement() {
+	Integer getBestIntersectionForSettlement(boolean initial) {
+		return this.getBestIntersectionForSettlement(initial, this.getBoard(), this, false);
+	}
+	
+	Integer getBestIntersectionForSettlement(boolean initial, Board fakeBoard, ComputerPlayer fakePlayer) {
+		return this.getBestIntersectionForSettlement(initial, fakeBoard, fakePlayer, true);
+	}
+	
+	Integer getBestIntersectionForSettlement(boolean initial, Board board, ComputerPlayer cp, boolean modifyBoard) {
 		int maxProb = 0;
 		Intersection bestInter = null;
-		for (Intersection inter : this.getBoard().getIntersections()) {
+		Iterable<Intersection> intersections;
+		if (initial)
+			intersections = board.getIntersections();
+		else
+			intersections = cp.getPossibleSettlementPlacements();
+		for (Intersection inter : intersections) {
 			// For settlements, harbors matter so adjust prob.
 			int currentProb = getTotalAdjustedProbability(inter);
 			if (currentProb >  maxProb && inter.canPlaceSettlement()) {
@@ -197,7 +226,9 @@ public class ComputerPlayer extends Player {
 				bestInter = inter;
 			}
 		}
-		return bestInter;
+		if (bestInter != null && modifyBoard) 
+			cp.placeSettlement(bestInter.getId());
+		return (bestInter != null) ? bestInter.getId() : null;
 	}
 
 	@Override
@@ -205,11 +236,12 @@ public class ComputerPlayer extends Player {
 		System.out.println(this.getPlayerColor() + " doing setup.");
 		// Really the dumbest thing we can do here. 
 		// Just get something working, and probably not the worst strategy.
-		Intersection bestInter = this.getBestIntersectionForSettlement();
-		this.placeSettlement(bestInter);
+		int bestInterId = this.getBestIntersectionForSettlement(true);
+		this.placeSettlement(bestInterId);
 		
 		// totally stupid about this
-		this.placeRoad(bestInter.getEdges().iterator().next());
+		Intersection bestInter = this.getBoard().getIntersectionData().getElement(bestInterId);
+		this.placeRoad(bestInter.getEdges().iterator().next().getId());
 		// for debugging
 //		for (Edge e : bestInter.getEdges())
 //			this.placeRoad(e);
@@ -289,28 +321,46 @@ public class ComputerPlayer extends Player {
 		return edges;
 	}
 	
-	protected Edge chooseRoadLocation() {
+	protected Collection<Intersection> getPossibleSettlementPlacements() {
+		List<Intersection> inters = new ArrayList<Intersection>();
+		for (Edge e : this.getOwnedEdges().getAll())
+			for (Intersection i : e.getIntersections())
+				if (i.canPlaceSettlement())
+					inters.add(i);
+		return inters;
+	}
+	
+	protected Integer chooseRoadLocation() {
+		return this.chooseRoadLocation(this.getBoard(), this, false);
+	}
+	
+	protected Integer chooseRoadLocation(Board fakeBoard, ComputerPlayer fakePlayer) {
+		return this.chooseRoadLocation(fakeBoard, fakePlayer, true);
+	}
+	
+	protected Integer chooseRoadLocation(Board board, ComputerPlayer cp, boolean shouldModifyBoard) {
 		// yes, not the most efficient, but this is the dumb one
 		Edge anyEdge = null;
 		// basically, go through all the edges on which we can place a road,
 		// if we find one that could lead to a settlement being placed, do that
 		// otherwise just return anything. (or null, if we found no placements)
-		for (Edge e : this.getPossibleRoadPlacements()) {
+		for (Edge e : cp.getPossibleRoadPlacements()) {
 			boolean neighborsSettlement = false;
 			for (Intersection i : e.getIntersections())
 				if (!i.canPlaceSettlement())
 					neighborsSettlement = true;
 			if (!neighborsSettlement)
-				return e;
+				return e.getId();
 			anyEdge = e;
 		}
-		return anyEdge;
+		return (anyEdge != null) ? anyEdge.getId() : null;
 	}
 
 	@Override
 	public boolean chooseAndPlaceRoad() {
-		Edge e = this.chooseRoadLocation();
-		this.placeRoad(e);
+		Integer id = this.chooseRoadLocation();
+		assert (id != null); // CPU should never have done this if that is the case
+		this.placeRoad(id);
 		return true;
 	}
 

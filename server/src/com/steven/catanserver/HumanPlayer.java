@@ -1,16 +1,21 @@
 package com.steven.catanserver;
 
-import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPubSub;
 
 public class HumanPlayer extends Player {
 	public final transient Boolean isSync = false;
+	private BoardModel boardModel;
 	
 	HumanPlayer(PlayerColor pc, BoardModel board, String userId, int turnOrder) {
 		super(pc, board, turnOrder, userId);
-		// TODO Auto-generated constructor stub
+		this.boardModel = board;
 	}
 	
+	public HumanPlayer(Board fake, HumanPlayer hp) {
+		// TODO: there might be a bug here with not setting board here
+		super(fake, hp);
+	}
+
 	class MyListener extends JedisPubSub implements MessageSender.Waiter {
 		
 		private MessageSender messageSender;
@@ -49,6 +54,10 @@ public class HumanPlayer extends Player {
         	
         }
 	}
+	
+	BoardModel getBoardModel() {
+		return this.boardModel;
+	}
 
 	public Boolean doTurn() {
 //		this.getBoard().notifyTurnStart(this.getId());
@@ -56,7 +65,7 @@ public class HumanPlayer extends Player {
 	}
 
 	public void registerChannelHandler(MessageSender messageSender) {
-		this.getBoard().registerChannelListener(new MyListener().setSender(messageSender));
+		this.getBoardModel().registerChannelListener(new MyListener().setSender(messageSender));
 	}
 
 	public String handleMessage(String message) {

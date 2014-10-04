@@ -6,13 +6,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
-import redis.clients.jedis.Jedis;
-
-import fi.iki.elonen.IWebSocketFactory;
 import fi.iki.elonen.NanoHTTPD.IHTTPSession;
 import fi.iki.elonen.NanoHTTPD.Method;
 import fi.iki.elonen.NanoHTTPD.Response;
-import fi.iki.elonen.WebSocket;
 
 public class Controllers {
 	
@@ -58,7 +54,7 @@ public class Controllers {
 		// TODO: use string switching in 1.7
 //		System.out.println(uri);
 		if (uri.contentEquals("/register")) {
-			String wait = parms.get("wait");
+			// String wait = parms.get("wait"); ...  pretty sure not needed
 			String boardId = parms.get("board_id");
 			String userId = parms.get("user_id");
 			if (boardId == null || userId == null)

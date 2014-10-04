@@ -15,6 +15,11 @@ public class VictoryPointData {
 		}
 	}
 	
+	VictoryPointData(VictoryPointData vp) {
+		this.totalToWin = vp.totalToWin;
+		this.victoryPoints = new HashMap<PlayerColor, Integer>(vp.victoryPoints);
+	}
+	
 	Boolean hasPlayerWon(PlayerColor p) {
 		return this.victoryPoints.get(p) >= this.totalToWin;
 	}

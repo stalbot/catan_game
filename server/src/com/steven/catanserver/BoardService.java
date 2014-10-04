@@ -3,10 +3,8 @@ package com.steven.catanserver;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
-import com.sun.javadoc.Type;
 
 public class BoardService {
 	
@@ -19,6 +17,7 @@ public class BoardService {
 	}
 	
 	private static class HandSerializer implements JsonSerializer<HandData> {
+		@SuppressWarnings("unused")
 		private String userId;
 		
 		HandSerializer(String userId) {
@@ -41,6 +40,7 @@ public class BoardService {
 	}
 	
 	private static class BoardContainer {
+		@SuppressWarnings("unused")
 		private BoardModel board;
 		BoardContainer(BoardModel board) {
 			this.board = board;

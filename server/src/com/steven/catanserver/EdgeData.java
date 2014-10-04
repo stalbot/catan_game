@@ -1,16 +1,22 @@
 package com.steven.catanserver;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.Map.Entry;
 
 public class EdgeData implements DataContainer<Edge> {
 
 	private HashMap<Integer, Edge> edges = new HashMap<Integer, Edge>();
-	private transient BoardModel board;
+	private transient Board board;
 	
-	EdgeData(BoardModel board) {
+	EdgeData(Board board) {
 		this.board = board;
+	}
+	
+	EdgeData(Board board, EdgeData toCopy) {
+		this.board = board;
+		this.edges = new HashMap<Integer, Edge>();
+		for (Entry<Integer, Edge> e : toCopy.edges.entrySet())
+			this.edges.put(e.getKey(), new Edge(e.getValue()));
 	}
 	
 	@Override
@@ -41,7 +47,7 @@ public class EdgeData implements DataContainer<Edge> {
 		return this.board.getIntersectionData();
 	}
 	
-	BoardModel getBoard() {
+	Board getBoard() {
 		return this.board;
 	}
 	

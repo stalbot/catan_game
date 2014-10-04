@@ -1,23 +1,15 @@
 package com.steven.catanserver;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.Map.Entry;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
-import com.steven.catanserver.HexData.IJCoords;
 
 public final class HexData implements DataContainer<Hex> {
 	
@@ -51,7 +43,7 @@ public final class HexData implements DataContainer<Hex> {
 		}
 	}
 	
-	public static HexData generateHexes(BoardModel board) {
+	public static HexData generateHexes(Board board) {
 		return generateHexes(defaultHexCounts, defaultNumCounts, defaultRadius, board);
 	}
 
@@ -59,7 +51,7 @@ public final class HexData implements DataContainer<Hex> {
 			HashMap<HexType, Integer> hexcounts,
 			HashMap<Integer, Integer> numcounts,
 			int radius, 
-			BoardModel board) {
+			Board board) {
 		LinkedList<HexType> hexTypes = new LinkedList<HexType>();
 		for (Entry<HexType, Integer> e : hexcounts.entrySet())
 			for (int i=0; i<e.getValue(); i++)
@@ -105,9 +97,9 @@ public final class HexData implements DataContainer<Hex> {
 	private int minHeight = 0;
 	private int minWidth = 0;
 	private int robberHexId;
-	private transient BoardModel board;
+	private transient Board board;
 	
-	public BoardModel getBoard() {
+	public Board getBoard() {
 		return board;
 	}
 	
@@ -119,9 +111,9 @@ public final class HexData implements DataContainer<Hex> {
 		this.robberHexId = hex.getId();
 	}
 	
-	private HexData(int radius, BoardModel board) {
+	private HexData(int radius, Board board2) {
 		this.radius = radius;
-		this.board = board;
+		this.board = board2;
 	}
 	
 	public int hashXYCoords(int x, int y) {
@@ -298,7 +290,10 @@ public final class HexData implements DataContainer<Hex> {
 	}
 	
 	private static class JsonContainer {
+		// A very simple container for jsonifying
+		@SuppressWarnings("unused")
 		private Hex[][] hexes;
+		@SuppressWarnings("unused")
 		private int robberHexId;
 		
 		JsonContainer(Hex[][] hexes, int robberHexId) {

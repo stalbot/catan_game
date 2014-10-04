@@ -13,6 +13,10 @@ public class HandData {
 		}
 	}
 	
+	public HandData(HandData handData) {
+		this.hands = new HashMap<PlayerColor, CardCollection>(handData.hands);
+	}
+
 	public CardCollection getHand(PlayerColor player) {
 		return this.hands.get(player);
 	}

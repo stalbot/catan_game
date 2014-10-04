@@ -1,7 +1,5 @@
 package com.steven.catanserver;
 
-import com.google.gson.JsonElement;
-
 public enum TurnEvent {
 	TURN_START, TURN_SETUP_START, INTERSECTION_CHANGE, EDGE_CHANGE, TRADE_EVENT, TRADE_PROPOSAL_EVENT, DEV_CARD_PULL_EVENT;
 

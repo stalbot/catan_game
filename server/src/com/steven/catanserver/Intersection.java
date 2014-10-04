@@ -18,6 +18,18 @@ public class Intersection implements DataContainer.Keyable {
 		this.id = id;
 	}
 	
+	Intersection(Intersection toCopy) {
+		this.parent = toCopy.parent;
+		this.hexIds = new ArrayList<Integer>(toCopy.hexIds);
+		this.isCity = toCopy.isCity;
+		this.color = toCopy.color;
+		this.harborType = toCopy.harborType;
+		for (Edge edge : toCopy.getNeighboringEdges().getAll())
+			if (edge != null)
+				this.getNeighboringEdges().add(edge);
+		this.id = toCopy.id;
+	}
+	
 	private DataContainer.KeyedRelation<Edge> getNeighboringEdges() {
 //		if (this.parent == null)
 //			return null;
@@ -58,7 +70,7 @@ public class Intersection implements DataContainer.Keyable {
 		if (this.hexes == null) {
 			this.hexes = new HashSet<Hex>(3);
 			for (Integer i : this.hexIds) {
-				BoardModel b = this.parent.getBoard();
+				Board b = this.parent.getBoard();
 				this.hexes.add(b.getHex(i));
 			}
 		}

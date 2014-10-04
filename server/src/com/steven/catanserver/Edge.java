@@ -18,6 +18,17 @@ public class Edge implements DataContainer.Keyable {
 		this.id = id;
 	}
 	
+	Edge(Edge toCopy) {
+		this.parent = toCopy.parent;
+		for (Hex hex : toCopy.getHexes())
+			if (hex != null)
+				this.getNeighboringHexes().add(hex);
+		for (Intersection inter : toCopy.getNeighboringIntersections().getAll())
+			if (inter != null)
+				this.getNeighboringIntersections().add(inter);
+		this.id = toCopy.id;
+	}
+	
 	private DataContainer.KeyedRelation<Intersection> getNeighboringIntersections() {
 		assert (this.parent != null);
 		if (this.neighboringIntersections == null)

@@ -3,7 +3,6 @@ package com.steven.catanserver;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Random;
 import java.util.Map.Entry;
 
