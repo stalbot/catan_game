@@ -117,47 +117,56 @@ public class BoardModel extends Board {
 	/* Methods for players to modify the board */
 	
 	void placeSettlement(Intersection inter, Player p) {
-		inter.placeSettlement(p);
+		super.placeSettlement(inter, p);
 		this.saveModifiedToDB();
 		String message = new Gson().toJson(new TurnEvent.IntersectionChangeEvent(p, inter));
 		this.sendMessage(message);
 	}
 	
 	public void placeRoad(Edge edge, Player player) {
-		edge.placeRoad(player);
+		super.placeRoad(edge, player);
 		this.saveModifiedToDB();
 		String message = new Gson().toJson(new TurnEvent.EdgeChangeEvent(player, edge));
 		this.sendMessage(message);
 	}
 	
 	void placeCity(Intersection inter, Player p) {
-		assert (inter.canPlaceCity() && inter.getSettlementColor() != null && inter.getSettlementColor()  == p.getPlayerColor());
-		inter.placeCity(p);
+		super.placeCity(inter, p);
 		this.saveModifiedToDB();
 		String message = new Gson().toJson(new TurnEvent.IntersectionChangeEvent(p, inter));
 		this.sendMessage(message);
 	}
 	
 	void pullCard(Player p) {
-		DevelopmentCard devCard = this.getDevCards().remove(0);
-		devCard.receive(p);
-		p.addCard(devCard);
+		super.pullCard(p);
 		this.saveModifiedToDB();
 		String message = new Gson().toJson(new TurnEvent.DevCardPullEvent(p));
 		this.sendMessage(message);
 	}
 	
 	public void addVictoryPoint(Player player) {
-		this.getVPData().addVictoryPoint(player);
+		super.addVictoryPoint(player);
 		this.saveModifiedToDB();
 	}
 	
 	public void moveAndRob(Hex movedToHex, Player robbingPlayer, Player robbedPlayer) {
-		CardType ct = robbedPlayer.getHand().popRandom();
-		robbingPlayer.getHand().addOne(ct);
-		this.getHexData().setRobberHex(movedToHex);
+		super.moveAndRob(movedToHex, robbingPlayer, robbedPlayer);
 		this.saveModifiedToDB();
 		// TODO: robber message
+	}
+	
+	public boolean checkLargestArmy(Player player) {
+		boolean hasChanged = super.checkLargestArmy(player);
+		if (hasChanged)
+			this.saveModifiedToDB();
+		return hasChanged;
+	}
+	
+	public boolean checkLongestRoad(Player player) {
+		boolean hasChanged = super.checkLongestRoad(player);
+		if (hasChanged) 
+			this.saveModifiedToDB();
+		return hasChanged;
 	}
 	
 	/* Various Redis methods */
@@ -175,6 +184,11 @@ public class BoardModel extends Board {
 	public void notifySetupTurnStart(String playerId) {
 		Player player = this.getPlayer(playerId);
 		String message = new Gson().toJson(new TurnEvent.TurnSetupStartEvent(player));
+		this.sendMessage(message);
+	}
+	
+	protected void sendWinMessage(Player player) {
+		String message = new Gson().toJson(new TurnEvent.WinEvent(player));
 		this.sendMessage(message);
 	}
 	
@@ -302,7 +316,13 @@ public class BoardModel extends Board {
 			// TODO: consider trying to consolidate saves
 			this.saveModifiedToDB();
 			hasPlayerWon = this.hasPlayerWon(player.getPlayerColor());
+			// For debugging bad CPUs
+			if (this.getTurnNumber() > 800) {
+				System.out.println("Fail, nobody wins");
+				return;
+			}
 		} while (!hasPlayerWon);
+		this.sendWinMessage(player);
 		System.out.println(player.getPlayerColor().toString() + " has won the game!");
 	}
 	

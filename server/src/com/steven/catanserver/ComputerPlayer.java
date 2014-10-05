@@ -1,12 +1,6 @@
 package com.steven.catanserver;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.Map.Entry;
 
 import com.steven.catanserver.Purchases.PurchaseType;
@@ -152,6 +146,9 @@ public class ComputerPlayer extends Player {
 		System.out.println(this.getPlayerColor() + " starting turn.");
 		System.out.println(this.getHand());
 		
+		if (this.getHand().getCardCount(CardType.BRICK) >= 2 && this.getHand().getCardCount(CardType.WOOD) >= 2)
+			System.out.println("testing!");
+		
 		this.doAllPossiblePurchases();
 		
 		// For each card in hand, trade down if possible to the maximum amount we can spend on single purchase.
@@ -187,6 +184,8 @@ public class ComputerPlayer extends Player {
 	}
 	
 	Integer getBestIntersectionForCity(Board board, ComputerPlayer cp, boolean modifyBoard) {
+		if (cp.getCitiesInHand() <= 0)
+			return null;
 		int maxProb = 0;
 		Intersection bestInter = null;
 		for (Intersection inter : cp.getOwnedIntersections().getAll()) {
@@ -211,6 +210,8 @@ public class ComputerPlayer extends Player {
 	}
 	
 	Integer getBestIntersectionForSettlement(boolean initial, Board board, ComputerPlayer cp, boolean modifyBoard) {
+		if (cp.getSettlementsInHand() <= 0)
+			return null;
 		int maxProb = 0;
 		Intersection bestInter = null;
 		Iterable<Intersection> intersections;
@@ -316,9 +317,12 @@ public class ComputerPlayer extends Player {
 			for (Intersection i : e.getIntersections())
 				if (i.getSettlementColor() == null || i.getSettlementColor() == this.getPlayerColor())
 					for (Edge eNeighbor : i.getAllNeighboringEdges())
-						if (eNeighbor.canPlaceRoad())
+						if (eNeighbor.canPlaceRoad()) {
+//							System.out.println("Adding " + eNeighbor.getId() + " " + eNeighbor +  " as potential road.");
+							assert (eNeighbor.canPlaceRoad());
 							edges.add(eNeighbor);
-		return edges;
+						}
+		return new HashSet<Edge>(edges);
 	}
 	
 	protected Collection<Intersection> getPossibleSettlementPlacements() {
@@ -339,8 +343,9 @@ public class ComputerPlayer extends Player {
 	}
 	
 	protected Integer chooseRoadLocation(Board board, ComputerPlayer cp, boolean shouldModifyBoard) {
-		// yes, not the most efficient, but this is the dumb one
-		Edge anyEdge = null;
+		if (cp.getRoadsInHand() <= 0)
+			return null;
+		Edge edge = null;
 		// basically, go through all the edges on which we can place a road,
 		// if we find one that could lead to a settlement being placed, do that
 		// otherwise just return anything. (or null, if we found no placements)
@@ -349,11 +354,16 @@ public class ComputerPlayer extends Player {
 			for (Intersection i : e.getIntersections())
 				if (!i.canPlaceSettlement())
 					neighborsSettlement = true;
+			edge = e;
 			if (!neighborsSettlement)
-				return e.getId();
-			anyEdge = e;
+				break;
 		}
-		return (anyEdge != null) ? anyEdge.getId() : null;
+		if (shouldModifyBoard && edge != null) {
+			System.out.println("Chose to place road at edge id " + edge.getId() + " " + edge + " with board (player) " + cp.getBoard() + " and board (edge) " + edge.parent.getBoard());
+			assert (edge.canPlaceRoad());
+			cp.placeRoad(edge.getId());
+		}
+		return (edge != null) ? edge.getId() : null;
 	}
 
 	@Override

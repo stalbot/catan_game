@@ -16,7 +16,7 @@ public class EdgeData implements DataContainer<Edge> {
 		this.board = board;
 		this.edges = new HashMap<Integer, Edge>();
 		for (Entry<Integer, Edge> e : toCopy.edges.entrySet())
-			this.edges.put(e.getKey(), new Edge(e.getValue()));
+			this.edges.put(e.getKey(), new Edge(e.getValue(), this));
 	}
 	
 	@Override

@@ -18,8 +18,8 @@ public class Intersection implements DataContainer.Keyable {
 		this.id = id;
 	}
 	
-	Intersection(Intersection toCopy) {
-		this.parent = toCopy.parent;
+	Intersection(Intersection toCopy, IntersectionData parent) {
+		this.parent = parent;
 		this.hexIds = new ArrayList<Integer>(toCopy.hexIds);
 		this.isCity = toCopy.isCity;
 		this.color = toCopy.color;

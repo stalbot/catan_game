@@ -1,7 +1,7 @@
 package com.steven.catanserver;
 
 public enum TurnEvent {
-	TURN_START, TURN_SETUP_START, INTERSECTION_CHANGE, EDGE_CHANGE, TRADE_EVENT, TRADE_PROPOSAL_EVENT, DEV_CARD_PULL_EVENT;
+	TURN_START, TURN_SETUP_START, INTERSECTION_CHANGE, EDGE_CHANGE, TRADE_EVENT, TRADE_PROPOSAL_EVENT, DEV_CARD_PULL_EVENT, WIN_EVENT;
 
 	/* Simple classes to handle packaging of event data. */
 	
@@ -79,6 +79,14 @@ public enum TurnEvent {
 		String eventType = DEV_CARD_PULL_EVENT.toString();
 		Player player;
 		DevCardPullEvent(Player p) {
+			this.player = p;
+		}
+	}
+	
+	public static class WinEvent {
+		String eventType = WIN_EVENT.toString();
+		Player player;
+		WinEvent(Player p) {
 			this.player = p;
 		}
 	}

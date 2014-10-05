@@ -16,7 +16,7 @@ public class IntersectionData implements DataContainer<Intersection> {
 		this.board = board;
 		this.intersections = new HashMap<Integer, Intersection>();
 		for (Entry<Integer, Intersection> e : toCopy.intersections.entrySet())
-			this.intersections.put(e.getKey(), new Intersection(e.getValue()));
+			this.intersections.put(e.getKey(), new Intersection(e.getValue(), this));
 	}
 	
 	Board getBoard() {

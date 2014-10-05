@@ -14,6 +14,8 @@
             </line>
             <polygon ng-repeat="inter in intersections" ng-attr-points="{{ inter.points }}" ng-attr-fill="{{ inter.color }}">
             </polygon>
+            <polygon ng-attr-points="{{ robberPoints }}" fill="black">
+            </polygon>
 
             <line ng-repeat="line in harborLines"
                 ng-attr-x1="{{ line.x1 }}" ng-attr-x2="{{ line.x2 }}"

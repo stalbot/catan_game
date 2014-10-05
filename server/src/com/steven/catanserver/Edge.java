@@ -6,7 +6,7 @@ public class Edge implements DataContainer.Keyable {
 	
 	private int id;
 	private PlayerColor color = null;
-	private transient EdgeData parent;
+	transient EdgeData parent; // TODO: back to private
 	private DataContainer.KeyedRelation<Intersection> neighboringIntersections = null;
 	private DataContainer.KeyedRelation<Hex> neighboringHexes = null;
 	
@@ -18,8 +18,8 @@ public class Edge implements DataContainer.Keyable {
 		this.id = id;
 	}
 	
-	Edge(Edge toCopy) {
-		this.parent = toCopy.parent;
+	Edge(Edge toCopy, EdgeData parent) {
+		this.parent = parent;
 		for (Hex hex : toCopy.getHexes())
 			if (hex != null)
 				this.getNeighboringHexes().add(hex);
@@ -27,6 +27,7 @@ public class Edge implements DataContainer.Keyable {
 			if (inter != null)
 				this.getNeighboringIntersections().add(inter);
 		this.id = toCopy.id;
+		this.color = toCopy.color;
 	}
 	
 	private DataContainer.KeyedRelation<Intersection> getNeighboringIntersections() {
@@ -50,6 +51,10 @@ public class Edge implements DataContainer.Keyable {
 	public int getId() {
 		// TODO Auto-generated method stub
 		return this.id;
+	}
+	
+	public PlayerColor getPlayerColor() {
+		return this.color;
 	}
 	
 	Iterable<Hex> getHexes() {
@@ -78,8 +83,8 @@ public class Edge implements DataContainer.Keyable {
 	}
 
 	public void placeRoad(Player player) {
+		System.out.println("Placing road on edge " + this.getId() + " " + this + " with board " + this.parent.getBoard());
 		assert (this.canPlaceRoad());
-//		System.out.println("Placing road on edge " + this.getId() + " with intersection neighbors " + this.getNeighboringIntersections().ids);
 		this.color = player.getPlayerColor();
 	}
 	

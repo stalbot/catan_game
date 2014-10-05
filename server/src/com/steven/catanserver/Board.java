@@ -1,12 +1,6 @@
 package com.steven.catanserver;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class Board {
 	public static final int VPS_TO_WIN = 10;
@@ -25,14 +19,16 @@ public class Board {
 	
 	public static Board makeFakeBoard(Board template) {
 		Board fake = new Board(template.players.size());
+		fake.hexes = template.hexes;  // immutable
+		fake.intersections = new IntersectionData(fake, template.intersections);
+		fake.edges = new EdgeData(fake, template.edges);
+		fake.id = template.id;
+		
 		for (HumanPlayer hp : template.getHumanPlayers())
 			fake.addHumanPlayer(new HumanPlayer(fake, hp));
 		for (ComputerPlayer cp: template.getComputerPlayers())
 			fake.addComputerPlayer(new ComputerPlayer(fake, cp));
-		fake.hexes = template.hexes;  // immutable
-		fake.intersections = new IntersectionData(template, template.intersections);
-		fake.edges = new EdgeData(template, template.edges);
-		fake.id = template.id;
+		
 		fake.devCards = new LinkedList<DevelopmentCard>(template.devCards);  // cards immutable, list is mutable
 		fake.handData = new HandData(template.handData);  // should not be used
 		fake.victoryPoints = new VictoryPointData(template.victoryPoints);
@@ -238,6 +234,7 @@ public class Board {
 		System.out.println("Placing road.");
 		Edge edge = this.getEdgeData().getEdge(edgeId);
 		Player player = this.getPlayersByColors().get(playerColor);
+		assert (player.getOwnedEdges().getAll().contains(edge));
 		this.placeRoad(edge, player);
 	}
 	
@@ -270,5 +267,29 @@ public class Board {
 		CardType ct = robbedPlayer.getHand().popRandom();
 		robbingPlayer.getHand().addOne(ct);
 		this.getHexData().setRobberHex(movedToHex);
+	}
+
+	boolean checkLargestArmy(Player player) {
+		PlayerColor currentLAP = this.getVPData().getLargestArmyPlayer();
+		if (currentLAP == player.getPlayerColor() || player.getNumSoldierPlayed() < VictoryPointData.MINIMUM_SOLDIERS)
+			return false;
+		Player lap = this.getPlayerByColor(currentLAP);
+		if (lap == null || lap.getNumSoldierPlayed() < player.getNumSoldierPlayed()) {
+			this.getVPData().setLargestArmyPlayer(player.getPlayerColor());
+			return true;
+		}
+		return false;
+	}
+	
+	boolean checkLongestRoad(Player player) {
+		PlayerColor currentLRP = this.getVPData().getLongestRoadPlayer();
+		if (currentLRP == player.getPlayerColor() || player.getConsecutiveRoads() < VictoryPointData.MINIMUM_ROADS)
+			return false;
+		Player lap = this.getPlayerByColor(currentLRP);
+		if (lap == null || lap.getConsecutiveRoads() < player.getConsecutiveRoads()) {
+			this.getVPData().setLongestRoadPlayer(player.getPlayerColor());
+			return true;
+		}
+		return false;
 	}
 }

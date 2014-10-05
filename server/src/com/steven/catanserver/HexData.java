@@ -80,7 +80,10 @@ public final class HexData implements DataContainer<Hex> {
 //				System.out.println(String.format("%d %d %d %s", x, y, r, nums));
 				HexType hType = (r != radius) ? hexTypes.remove() : HexType.OCEAN;
 				Integer rollNum = (hType.hasRollNumber()) ? nums.remove() : null;
-				hexes.addHex(new Hex(id, rollNum, hType, x, y));
+				Hex hex = new Hex(id, rollNum, hType, x, y);
+				if (hType == HexType.DESERT)
+					hexes.robberHexId = hex.getId();
+				hexes.addHex(hex);
 			}
 		}
 		

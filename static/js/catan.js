@@ -61,6 +61,16 @@ function makeHexSVGPoints(points) {
     return makeSVGPointStr(pointArray);
 }
 
+function findScaledMidPoint(point1, point2, scalar) {
+    var xVal = (point1.x + point2.x) * scalar;
+    var yVal = (point1.y + point2.y) * scalar;
+    return {x: xVal, y: yVal};
+}
+
+function findMidPoint(point1, point2) {
+    return findScaledMidPoint(point1, point2, 0.5);
+}
+
 function makeSettlementSVGPoints(centerX, centerY, scalar, isCity) {
     if (!scalar)
         scalar = 1;
@@ -198,7 +208,8 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
             scopeCircles = [],
             scopeIntersections = [],
             scopeEdges = [],
-            harborLines = [];
+            harborLines = [],
+            robberPoints = '';
 
         var hexGrid = board.hexes.hexes;
         angular.forEach(hexGrid, function(hexRow, i) {
@@ -223,17 +234,16 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
                     points: makeHexSVGPoints(points),
                     color: $scope.hexColorMap[hex.hexType]
                 });
-                var centerX = (points.topRight.x + points.topLeft.x) / 2;
-                var centerY = (points.bottom.y + points.top.y) / 2;
+                var centerPoint = findMidPoint(points.bottom, points.top);
                 var dots = buildProbDots(hex.rollNumber);
                 if (hex.rollNumber) {
                     scopeCircles.push({
-                        cx: centerX,
-                        cy: centerY,
-                        textX: centerX - fontSize * 0.25 * String(hex.rollNumber).length,
-                        textY: centerY - fontSize * 0.05,
-                        dotsX: centerX - fontSize * 0.13 * dots.length,
-                        dotsY: centerY + fontSize * 0.35,
+                        cx: centerPoint.x,
+                        cy: centerPoint.y,
+                        textX: centerPoint.x - fontSize * 0.25 * String(hex.rollNumber).length,
+                        textY: centerPoint.y - fontSize * 0.05,
+                        dotsX: centerPoint.x - fontSize * 0.13 * dots.length,
+                        dotsY: centerPoint.y + fontSize * 0.35,
                         radius: circleRadius,
                         color: circleColor,
                         fontSize: fontSize + 'px',
@@ -244,29 +254,35 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
                 }
                 else if (hex.harborType) {
                     scopeCircles.push({
-                        cx: centerX,
-                        cy: centerY,
+                        cx: centerPoint.x,
+                        cy: centerPoint.y,
                         // text: hex.xPosition + ',' + hex.yPosition + ',' + (-(hex.yPosition + hex.xPosition)),
                         radius: circleRadius,
-                        textX: centerX - fontSize * 0.25,
-                        textY: centerY - fontSize * 0.05,
+                        textX: centerPoint.x - fontSize * 0.25,
+                        textY: centerPoint.y - fontSize * 0.05,
                         text: hex.harborType.toLowerCase() == 'generic' ? '?' : '',
                         color: getResourceColor(hex.harborType.toLowerCase())
                     });
+                }
+                if (hex.id == board.hexes.robberHexId) {
+                    var robberPointArr = [points.top, points.bottomLeft, points.bottomRight];
+                    robberPointArr = robberPointArr.map(function(p) {
+                        return findMidPoint(centerPoint, p);
+                    });
+                    robberPoints = makeSVGPointStr(robberPointArr);
                 }
                 var interArray = getIntersectionsAsArray(points);
                 for (var index=0; index<6; index++) {
                     // this uniquely covers all relevant intersections on board
                     var interId = hex.intersections.ids[index];
                     var interInfo = board.intersections.intersections[interId];
-                    var centerPoint = interArray[index];
-                    // TODO: this is not working!
+                    var interCenterPoint = interArray[index];
                     if (hex.harborType && interInfo && interInfo.harborType) {
                         harborLines.push({
-                            x1: centerX,
-                            y1: centerY,
-                            x2: centerPoint.x,
-                            y2: centerPoint.y
+                            x1: centerPoint.x,
+                            y1: centerPoint.y,
+                            x2: interCenterPoint.x,
+                            y2: interCenterPoint.y
                         });
                     }
                     // Only draw other info 1 time per intersection.
@@ -275,7 +291,7 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
                     if (interInfo && interInfo.color) {
                         scopeIntersections.push({
                             color: interInfo.color.toLowerCase(),
-                            points: makeSettlementSVGPoints(centerPoint.x, centerPoint.y, sideLength, interInfo.isCity)
+                            points: makeSettlementSVGPoints(interCenterPoint.x, interCenterPoint.y, sideLength, interInfo.isCity)
                         });
                     }
                 }
@@ -307,6 +323,7 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
         $scope.intersections = scopeIntersections;
         $scope.harborLines = harborLines;
         $scope.edges = scopeEdges;
+        $scope.robberPoints = robberPoints;
     };
 
     var refreshPieces = function(board) {
@@ -347,6 +364,18 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
             boardCache.edges.edges[edge.id] = edge;
             refreshHexes(boardCache);
             return 'Player ' + edge.color + ' built a new road';
+        },
+        TRADE_EVENT: function(message) {
+            // TODO: anything if this was with the current player
+            return 'A trade happened!';
+        },
+        DEV_CARD_PULL_EVENT: function(message) {
+            var player = message.player;
+            return 'Player ' + player.color + " bought a development card.";
+        },
+        WIN_EVENT: function(message) {
+            var player = message.player;
+            return 'Player ' + player.color + " has won the game!";
         }
     };
 

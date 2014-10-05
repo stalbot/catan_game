@@ -1,9 +1,6 @@
 package com.steven.catanserver;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public abstract class Player {
 	
@@ -11,6 +8,13 @@ public abstract class Player {
 	private transient Board board;
 	private String id = null;
 	private int turnOrder;
+	private int numSoldiersPlayed = 0;
+	private int longestConsecutiveRoads = 0;
+	
+	private int roadsInHand = 15;
+	private int settlementsInHand = 5;
+	private int citiesInHand = 4;
+	
 	private HashMap<DevelopmentCard, Integer> devCards = new HashMap<DevelopmentCard, Integer>();
 	private DataContainer.KeyedRelation<Intersection> ownedIntersections = null;
 	private DataContainer.KeyedRelation<Edge> ownedEdges = null;
@@ -32,6 +36,17 @@ public abstract class Player {
 	
 	Player(Board board, Player p) {
 		this(p.getPlayerColor(), board, p.getTurnOrder(), p.getId());
+		for (Intersection inter : p.getOwnedIntersections().getAll())
+			this.getOwnedIntersections().add(inter.getId());
+		for (Edge e : p.getOwnedEdges().getAll())
+			this.getOwnedEdges().add(e.getId());
+		this.longestConsecutiveRoads = p.longestConsecutiveRoads;
+		this.numSoldiersPlayed = p.numSoldiersPlayed;
+		this.citiesInHand = p.citiesInHand;
+		this.roadsInHand = p.roadsInHand;
+		this.settlementsInHand = p.settlementsInHand;
+		assert (this.getOwnedEdges().getAll().size() == 0 ||
+				this.getOwnedEdges().getAll().get(0) ==  this.getBoard().getEdgeData().getEdge(this.getOwnedEdges().getAll().get(0).getId()));
 	}
 
 	String getId() {
@@ -103,12 +118,35 @@ public abstract class Player {
 		return this.color;
 	}
 	
+	void addPlayedSoldier() {
+		++this.numSoldiersPlayed;
+		this.getBoard().checkLargestArmy(this);
+	}
+	
+	int getNumSoldierPlayed() {
+		return this.numSoldiersPlayed;
+	}
+	
+	int getCitiesInHand() {
+		return this.citiesInHand;
+	}
+	
+	int getSettlementsInHand() {
+		return this.settlementsInHand;
+	}
+	
+	int getRoadsInHand() {
+		return this.roadsInHand;
+	}
+	
 	public void buyCity(int interId) {
 		this.getHand().subtract(Purchases.PurchaseType.CITY.getPrice());
 		this.placeCity(interId);
 	}
 	
 	protected void placeCity(int interId) {
+		assert (this.citiesInHand > 0);
+		this.citiesInHand--;
 		this.getBoard().addVictoryPoint(this);
 		this.getBoard().placeCity(interId, this.getPlayerColor());
 	}
@@ -119,6 +157,8 @@ public abstract class Player {
 	}
 	
 	protected void placeSettlement(int interId) {
+		assert (this.settlementsInHand > 0);
+		this.settlementsInHand--;
 		this.getBoard().addVictoryPoint(this);
 		this.getOwnedIntersections().add(interId);
 		this.getBoard().placeSettlement(interId, this.getPlayerColor());
@@ -129,9 +169,72 @@ public abstract class Player {
 		this.placeRoad(edgeId);
 	}
 	
+	int getConsecutiveRoads() {
+		return this.longestConsecutiveRoads;
+	}
+	
 	protected void placeRoad(int edgeId) {
+		assert (this.roadsInHand > 0);
+		this.roadsInHand--;
 		this.getOwnedEdges().add(edgeId);
 		this.getBoard().placeRoad(edgeId, this.getPlayerColor());
+		this.updateConsecutiveRoadCount(edgeId);
+		this.getBoard().checkLongestRoad(this);
+	}
+	
+	protected List<Edge> getChainedEdges(Edge e) {
+		return this.getChainedEdges(e, new ArrayList<Edge>(), null);
+	}
+	
+	protected List<Edge> getChainedEdges(Edge e, List<Edge> reusedList, Set<Integer> toExclude) {
+		reusedList.clear();
+		List<Edge> ret = reusedList;
+		for (Intersection i : e.getIntersections())
+			for (Edge eNeighbor : i.getEdges())
+				if (eNeighbor.getId() != e.getId() && eNeighbor.getPlayerColor() == this.color &&
+						(toExclude == null || !toExclude.contains(eNeighbor.getId())))
+					ret.add(eNeighbor);
+		return ret;
+	}
+	
+	private void updateConsecutiveRoadCount(Integer addedEdgeId) {
+		// checks to see if the addition of a road has created a longest road segment.
+		HashSet<Integer> visited = new HashSet<Integer>();
+		ArrayList<Edge> reusedContainer = new ArrayList<Edge>();
+		Edge startingEdge = this.getBoard().getEdgeData().getEdge(addedEdgeId);
+		int numConsecutive = 1; 
+		roadFindHelper(startingEdge, visited, numConsecutive, reusedContainer);
+	}
+	
+	private void roadFindHelper(Edge e, Set<Integer> visited, int numConsecutive, List<Edge> reusedContainer) {
+		/* 
+		 * This is an instance of the longest path problem. 
+		 * http://en.wikipedia.org/wiki/Longest_path_problem
+		 * 
+		 * Technically it is NP-hard, and this algorithm is probably exponential in time complexity, but...
+		 * (1) We're limited to 15 roads
+		 * (2) We don't search parts of the "graph" not connected to the newest road placed (b/c they 
+		 * 		couldn't have created a new longest road)
+		 * (3) If players are playing at all rationally, the branching factor should be pretty limited.
+		 * */
+		List<Edge> nexts = this.getChainedEdges(e, reusedContainer, visited);
+		if (nexts.size() == 0) {
+			if (numConsecutive > this.longestConsecutiveRoads) {
+				this.longestConsecutiveRoads = numConsecutive;
+				System.out.println(this.getPlayerColor() + " has " + this.longestConsecutiveRoads + " longest road length");
+			}
+			return;
+		}
+		visited.add(e.getId());
+		numConsecutive++;
+		if (nexts.size() == 1) {
+			// This is almost the same as else condition below, but there's the matter of saving some allocations.
+			roadFindHelper(nexts.get(0), visited, numConsecutive, reusedContainer);
+		}
+		else {
+			for (Edge next : new ArrayList<Edge>(nexts))
+				roadFindHelper(next, new HashSet<Integer>(visited), numConsecutive, reusedContainer);
+		}
 	}
 	
 	public void buyDevCard() {
