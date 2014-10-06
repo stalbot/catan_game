@@ -15,12 +15,14 @@ public class CardCollection {
 	
 	CardCollection() {
 		this.cardCounts = new HashMap<CardType, Integer>();
+		for (CardType ct : CardType.values())
+			this.cardCounts.put(ct, 0);
 	}
 	
 	CardCollection(CardType[] cardTypes, int[] numCards) {
+		this();
 		// This method useful for easy static instantiation
 		assert(cardTypes.length == numCards.length);
-		this.cardCounts = new HashMap<CardType, Integer>();
 		for (int i=0; i<cardTypes.length; i++) {
 			this.cardCounts.put(cardTypes[i], numCards[i]);
 		}

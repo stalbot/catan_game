@@ -259,13 +259,21 @@ public class Board {
 		p.addCard(devCard);
 	}
 	
+	public void playDevCard(Player player, DevelopmentCard devCard) {
+		devCard.play(player);
+	}
+	
 	public void addVictoryPoint(Player player) {
 		this.getVPData().addVictoryPoint(player);
 	}
 	
 	public void moveAndRob(Hex movedToHex, Player robbingPlayer, Player robbedPlayer) {
-		CardType ct = robbedPlayer.getHand().popRandom();
-		robbingPlayer.getHand().addOne(ct);
+		if (robbedPlayer != null) {
+			CardType ct = robbedPlayer.getHand().popRandom();
+			robbingPlayer.getHand().addOne(ct);
+		}
+		else
+			System.out.println(robbingPlayer.getPlayerColor() +  " didn't rob anybody!");
 		this.getHexData().setRobberHex(movedToHex);
 	}
 

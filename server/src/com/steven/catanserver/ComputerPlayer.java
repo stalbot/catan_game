@@ -140,16 +140,40 @@ public class ComputerPlayer extends Player {
 			}
 		}
 	}
+	
+	protected void playDevCards() {
+		// avoid concurrent modification problem.
+		for (Entry<DevelopmentCard, Integer> dcE : new HashMap<DevelopmentCard, Integer>(this.getDevCards()).entrySet())
+			for (int i=0, k=dcE.getValue(); i < k; i++)
+				switch(dcE.getKey()) {
+				case VICTORY_POINT:
+					break;
+				case ROAD_BUILDING:
+					Board fakeBoard = Board.makeFakeBoard(this.getBoard());
+					boolean canPlaceTwoRoads = true;
+					ComputerPlayer fakePlayer = (ComputerPlayer) fakeBoard.getPlayerByColor(this.getPlayerColor());
+					for (int j=0; j<2; j++) {
+						if (this.chooseRoadLocation(fakeBoard, fakePlayer) == null)
+							{canPlaceTwoRoads = false; break;}
+					}
+					if (!canPlaceTwoRoads)
+						break;
+				default:
+					this.playCard(dcE.getKey());
+				}
+	}
 
 	@Override
 	public Boolean doTurn() {
 		System.out.println(this.getPlayerColor() + " starting turn.");
 		System.out.println(this.getHand());
+		this.playDevCards();
 		
-		if (this.getHand().getCardCount(CardType.BRICK) >= 2 && this.getHand().getCardCount(CardType.WOOD) >= 2)
-			System.out.println("testing!");
+//		if (this.getHand().getCardCount(CardType.BRICK) >= 2 && this.getHand().getCardCount(CardType.WOOD) >= 2)
+//			System.out.println("testing!");
 		
 		this.doAllPossiblePurchases();
+		CardCollection hand = this.getHand();  // TODO: for debugging, remove
 		
 		// For each card in hand, trade down if possible to the maximum amount we can spend on single purchase.
 		for (Entry<CardType, Integer> ctEntry : this.getHand().getCards().entrySet()) {
@@ -160,6 +184,7 @@ public class ComputerPlayer extends Player {
 		}
 		
 		// maybe we lucked into something, try one more time.
+		// Not efficient, but this player has pretty cheap actions here.
 		this.doAllPossiblePurchases();
 		return true;
 	}
@@ -263,8 +288,40 @@ public class ComputerPlayer extends Player {
 
 	@Override
 	public RobberResponse doMoveRobber() {
-		// TODO Auto-generated method stub
-		return null;
+		// Another simple algo, just find the hex that has the highest blocked probability,
+		// taking blocking ourselves into account as negative, and with a penalty for nobody
+		// available to rob.
+		float bestHexVal = 0;
+		Hex bestHex = null;
+		Player playerToRob = null;
+		int currentHexId = this.getBoard().getHexData().getRobberHex().getId();
+		for (Hex h : this.getBoard().getHexes()) {
+			if (h.getId() == currentHexId)
+				continue;
+			float curVal = 0;
+			Player anyPlayer = null;
+			for (Intersection i : h.getIntersections()) {
+				if (!i.hasSettlement())
+					continue;
+				if (i.getSettlementColor() != this.getPlayerColor()) {
+					curVal += h.getRollProbability();
+					Player intersectionOwner = this.getBoard().getPlayerByColor(i.getSettlementColor());
+					if (intersectionOwner.getHand().getTotalCards() > 0)
+						anyPlayer = intersectionOwner;
+				}
+				else
+					curVal -= h.getRollProbability();
+			}
+			if (anyPlayer == null)
+				// 100% arbitrary, remember this guy is dumb.
+				curVal /= 2;
+			if (curVal > bestHexVal) {
+				bestHex = h;
+				bestHexVal = curVal;
+				playerToRob = anyPlayer;
+			}
+		}
+		return new RobberResponse(bestHex, playerToRob);
 	}
 	
 	private class CardSorter implements Comparator<Entry<CardType, Integer>> {
@@ -359,7 +416,7 @@ public class ComputerPlayer extends Player {
 				break;
 		}
 		if (shouldModifyBoard && edge != null) {
-			System.out.println("Chose to place road at edge id " + edge.getId() + " " + edge + " with board (player) " + cp.getBoard() + " and board (edge) " + edge.parent.getBoard());
+//			System.out.println("Chose to place road at edge id " + edge.getId() + " " + edge + " with board (player) " + cp.getBoard() + " and board (edge) " + edge.parent.getBoard());
 			assert (edge.canPlaceRoad());
 			cp.placeRoad(edge.getId());
 		}

@@ -1,7 +1,8 @@
 package com.steven.catanserver;
 
 public enum TurnEvent {
-	TURN_START, TURN_SETUP_START, INTERSECTION_CHANGE, EDGE_CHANGE, TRADE_EVENT, TRADE_PROPOSAL_EVENT, DEV_CARD_PULL_EVENT, WIN_EVENT;
+	TURN_START, TURN_SETUP_START, INTERSECTION_CHANGE, EDGE_CHANGE, TRADE_EVENT, TRADE_PROPOSAL_EVENT, 
+		DEV_CARD_PULL_EVENT, WIN_EVENT, ROBBER_MOVE_EVENT, DEV_CARD_PLAY_EVENT;
 
 	/* Simple classes to handle packaging of event data. */
 	
@@ -88,6 +89,28 @@ public enum TurnEvent {
 		Player player;
 		WinEvent(Player p) {
 			this.player = p;
+		}
+	}
+	
+	public static class RobberMoveEvent {
+		String eventType = ROBBER_MOVE_EVENT.toString();
+		Player robbingPlayer;
+		Hex newHex;
+		Player robbedPlayer;
+		RobberMoveEvent(Hex movedTo, Player robbing, Player robbed) {
+			this.newHex = movedTo;
+			this.robbingPlayer = robbing;
+			this.robbedPlayer = robbed;
+		}
+	}
+	
+	public static class DevCardPlayEvent {
+		String eventType = DEV_CARD_PLAY_EVENT.toString();
+		Player player;
+		DevelopmentCard devCard;
+		DevCardPlayEvent(Player p, DevelopmentCard dc) {
+			this.player = p;
+			this.devCard = dc;
 		}
 	}
 

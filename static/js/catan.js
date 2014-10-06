@@ -376,6 +376,15 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
         WIN_EVENT: function(message) {
             var player = message.player;
             return 'Player ' + player.color + " has won the game!";
+        },
+        ROBBER_MOVE_EVENT: function(message) {
+            boardCache.hexes.robberHexId = message.newHex.id;
+            var robbingPlayer = message.robbingPlayer;
+            var robbedPlayer = message.robbedPlayer;
+            return 'Player ' + robbingPlayer.color + ' moved the robber and robbed ' + (robbedPlayer ? robbedPlayer.color : "nobody");
+        },
+        DEV_CARD_PLAY_EVENT: function(message) {
+            return 'Player ' + message.player.color + ' played a ' + message.devCard + ' card.';
         }
     };
 

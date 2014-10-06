@@ -33,6 +33,8 @@ public class BoardModel extends Board {
 	public static final String MOST_RECENT_MESSAGE_KEY = "mostRecentMessage";
 	
 	public static final String EVENT_TYPE = "eventType";
+	
+	public static final int SLEEP_BETWEEN_TURNS_MS = 25;
 
 	static String makeRedisKey(String boardId) {
 		return "board:" + boardId;
@@ -152,7 +154,14 @@ public class BoardModel extends Board {
 	public void moveAndRob(Hex movedToHex, Player robbingPlayer, Player robbedPlayer) {
 		super.moveAndRob(movedToHex, robbingPlayer, robbedPlayer);
 		this.saveModifiedToDB();
-		// TODO: robber message
+		String message = new Gson().toJson(new TurnEvent.RobberMoveEvent(movedToHex, robbingPlayer, robbedPlayer));
+		this.sendMessage(message);
+	}
+	
+	public void playDevCard(Player player, DevelopmentCard dc) {
+		super.playDevCard(player, dc);
+		String message = new Gson().toJson(new TurnEvent.DevCardPlayEvent(player, dc));
+		this.sendMessage(message);
 	}
 	
 	public boolean checkLargestArmy(Player player) {
@@ -306,8 +315,10 @@ public class BoardModel extends Board {
 		Player player;
 				
 		do {
+			// Sleeping 
+			try { Thread.sleep(SLEEP_BETWEEN_TURNS_MS); } catch (InterruptedException e) {return;}
 			player = this.getPlayers().get(this.getTurnNumber() % numPlayers);
-			this.doRollAndGrantCards();
+			this.doRollAndGrantCards(player);
 			this.notifyTurnStart(player.getId());
 			if (!player.doTurn())
 				return;
@@ -326,11 +337,12 @@ public class BoardModel extends Board {
 		System.out.println(player.getPlayerColor().toString() + " has won the game!");
 	}
 	
-	private void doRollAndGrantCards() {
+	private void doRollAndGrantCards(Player player) {
 		Random rand = new Random();
 		int rollNum = (rand.nextInt(6) + 1) + (rand.nextInt(6) + 1);
 		if (rollNum == 7) {
 			System.out.println("7 rolled, yay!"); // TODO
+			player.moveRobber();
 			return;
 		}
 		System.out.println(rollNum + " was rolled");

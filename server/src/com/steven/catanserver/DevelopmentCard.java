@@ -31,7 +31,7 @@ public enum DevelopmentCard {
 	}, ROAD_BUILDING(2) {
 		// same as above
 		public Boolean play(Player player) {
-			// looks a little weird, but it is just choosing two resources, honoring clients
+			// looks a little weird, but it is just choosing two roads, honoring clients
 			if (player.chooseAndPlaceRoad())
 				return player.chooseAndPlaceRoad();
 			return false;

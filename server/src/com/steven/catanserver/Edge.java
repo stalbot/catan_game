@@ -83,7 +83,7 @@ public class Edge implements DataContainer.Keyable {
 	}
 
 	public void placeRoad(Player player) {
-		System.out.println("Placing road on edge " + this.getId() + " " + this + " with board " + this.parent.getBoard());
+//		System.out.println("Placing road on edge " + this.getId() + " " + this + " with board " + this.parent.getBoard());
 		assert (this.canPlaceRoad());
 		this.color = player.getPlayerColor();
 	}

@@ -186,14 +186,14 @@ public abstract class Player {
 		return this.getChainedEdges(e, new ArrayList<Edge>(), null);
 	}
 	
-	protected List<Edge> getChainedEdges(Edge e, List<Edge> reusedList, Set<Integer> toExclude) {
+	protected List<Edge> getChainedEdges(Edge e, List<Edge> reusedList, Set<Integer> intersToExclude) {
 		reusedList.clear();
 		List<Edge> ret = reusedList;
 		for (Intersection i : e.getIntersections())
-			for (Edge eNeighbor : i.getEdges())
-				if (eNeighbor.getId() != e.getId() && eNeighbor.getPlayerColor() == this.color &&
-						(toExclude == null || !toExclude.contains(eNeighbor.getId())))
-					ret.add(eNeighbor);
+			if (intersToExclude == null || !intersToExclude.contains(i.getId()))
+				for (Edge eNeighbor : i.getEdges())
+					if (eNeighbor.getId() != e.getId() && eNeighbor.getPlayerColor() == this.color)
+						ret.add(eNeighbor);
 		return ret;
 	}
 	
@@ -211,11 +211,18 @@ public abstract class Player {
 		 * This is an instance of the longest path problem. 
 		 * http://en.wikipedia.org/wiki/Longest_path_problem
 		 * 
-		 * Technically it is NP-hard, and this algorithm is probably exponential in time complexity, but...
+		 * The algorithm works by traversing the 'graph' of the edges and intersections (i.e. vertices), 
+		 * remembering the intersections that it visits, and recursively branching at every split in a 
+		 * path, only following paths that don't cross visited intersections.
+		 * 
+		 * Technically the longest path problem is generally NP-hard, and this algorithm here
+		 * is theoretically exponential in the number of edges time-complexity wise, but...
 		 * (1) We're limited to 15 roads
 		 * (2) We don't search parts of the "graph" not connected to the newest road placed (b/c they 
 		 * 		couldn't have created a new longest road)
 		 * (3) If players are playing at all rationally, the branching factor should be pretty limited.
+		 * 
+		 * In practice, this seems to be perfectly fast.
 		 * */
 		List<Edge> nexts = this.getChainedEdges(e, reusedContainer, visited);
 		if (nexts.size() == 0) {
@@ -225,7 +232,8 @@ public abstract class Player {
 			}
 			return;
 		}
-		visited.add(e.getId());
+		for (Intersection i: e.getIntersections())
+			visited.add(i.getId());
 		numConsecutive++;
 		if (nexts.size() == 1) {
 			// This is almost the same as else condition below, but there's the matter of saving some allocations.
@@ -253,12 +261,13 @@ public abstract class Player {
 		this.devCards.put(devCard, ++numCards);
 	}
 	
-	protected void doPlayCard(DevelopmentCard devCard) {
+	protected void playCard(DevelopmentCard devCard) {
 		assert (this.devCards.get(devCard) > 0);
 		Integer curVal = this.devCards.get(devCard);
 		if (--curVal == 0)
 			this.devCards.remove(devCard);
-		this.devCards.put(devCard, --curVal);
+		this.devCards.put(devCard, curVal);
+		this.getBoard().playDevCard(this, devCard);
 	}
 	
 	// intention for this: returns true if we should keep going, false means terminate,
