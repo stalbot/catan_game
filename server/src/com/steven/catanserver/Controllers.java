@@ -51,12 +51,13 @@ public class Controllers {
 
 	public static Response handle(String uri, Method method, IHTTPSession session) {
 		Map<String, String> parms = session.getParms();
-		// TODO: use string switching in 1.7
-//		System.out.println(uri);
-		if (uri.contentEquals("/register")) {
+		String boardId;
+		String userId;
+		switch(uri) {
+		case "/register":
 			// String wait = parms.get("wait"); ...  pretty sure not needed
-			String boardId = parms.get("board_id");
-			String userId = parms.get("user_id");
+			boardId = parms.get("board_id");
+			userId = parms.get("user_id");
 			if (boardId == null || userId == null)
 				return makeResponse(makeErrorJSON("400"), Response.Status.BAD_REQUEST);
 			Response ws = TurnHandlingWebSocket.getHandler().serve(session);
@@ -69,7 +70,6 @@ public class Controllers {
 				return makeResponse(makeErrorJSON("405"), Response.Status.METHOD_NOT_ALLOWED);
 			String responseJSON = BoardService.getBoardState(boardId, userId);
 			return makeResponse(responseJSON);
-		}
 //		else if (uri.contentEquals("/action")) {
 //			if (method != Method.POST)
 //				return makeResponse(makeErrorJSON("405"), Response.Status.METHOD_NOT_ALLOWED);
@@ -78,31 +78,28 @@ public class Controllers {
 //			if (method != Method.POST)
 //				return makeResponse(makeErrorJSON("405"), Response.Status.METHOD_NOT_ALLOWED);
 //		}
-		else if (uri.contentEquals("/new_game")) {
+		case "/new_game":
 			// TODO: definitely uncomment this
-//			if (method != Method.POST)
-//				return makeResponse(makeErrorJSON("405"), Response.Status.METHOD_NOT_ALLOWED);
+			if (method != Method.POST)
+				return makeResponse(makeErrorJSON("405"), Response.Status.METHOD_NOT_ALLOWED);
 			int numPlayers = 4;
 			try {
 				numPlayers = Integer.parseInt(parms.get("num_players"));
 			}
 			catch(NumberFormatException e) {}
 			return makeResponse(BoardService.makeNewBoard(parms.get("user_id"), numPlayers));
-		}
-		else if (uri.contentEquals("/start_game")) {
+		case "/start_game":
 			if (method != Method.POST)
 				return makeResponse(makeErrorJSON("405"), Response.Status.METHOD_NOT_ALLOWED);
-			String boardId = parms.get("board_id");
-			String userId = parms.get("user_id");
+			boardId = parms.get("board_id");
+			userId = parms.get("user_id");
 			BoardService.startGame(boardId, userId);
 			return makeResponse("{\"acknowledged\": true}");
-		}
-		else if (uri.contentEquals("/test")) {
+		case "/test":
 			if (method != Method.GET)
 				return makeResponse(makeErrorJSON("405"), Response.Status.METHOD_NOT_ALLOWED);
 			return makeResponse("OK");
-		}
-		else {
+		default:
 			String filename = "/Users/Steven/catan/static/js" + uri; 
 			System.out.println(filename);
 			return makeFileResponse(filename);

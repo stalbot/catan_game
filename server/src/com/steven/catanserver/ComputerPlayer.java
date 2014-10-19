@@ -7,8 +7,30 @@ import com.steven.catanserver.Purchases.PurchaseType;
 
 public class ComputerPlayer extends Player {
 	
+	public enum ComputerPlayerType {
+		COMPUTER_PLAYER, STATE_AWARE_CPU_PLAYER, STATE_SEARCHING_CPU_PLAYER;
+	}
+	
 	static final int HARBOR_ADJUSTMENT = 2;
 	static final HashMap<CardType, Integer> maximumCardsInPurchase = new HashMap<CardType, Integer>();
+	
+	public static final Class<? extends ComputerPlayer> getCPUPlayerByType(String typeName) {
+		return getCPUPlayerByType(ComputerPlayerType.valueOf(typeName));
+	}
+	
+	public static final Class<? extends ComputerPlayer> getCPUPlayerByType(ComputerPlayerType type) {
+		switch (type) {
+		case COMPUTER_PLAYER:
+			return ComputerPlayer.class;
+		case STATE_AWARE_CPU_PLAYER:
+			return StateAwareCPUPlayer.class;
+		case STATE_SEARCHING_CPU_PLAYER:
+			return StateSearchingCPUPlayer.class;
+		default:
+			// Compiler needs this here for some reason, even if we cover all the cases above.
+			return ComputerPlayer.class;
+		}
+	}
 	
 	private static final int MINIMUM_MONOPOLY_CARDS = 2; 
 	
@@ -37,6 +59,10 @@ public class ComputerPlayer extends Player {
 	
 	public ComputerPlayer(Board fake, ComputerPlayer cp) {
 		super(fake, cp);
+	}
+	
+	ComputerPlayerType getPlayerType() {
+		return ComputerPlayerType.COMPUTER_PLAYER;
 	}
 
 	protected static class PurchaseTypeEffectSorter implements Comparator<PurchaseType> {
@@ -141,26 +167,38 @@ public class ComputerPlayer extends Player {
 		}
 	}
 	
+	protected List<DevelopmentCard> getPlayableDevCards() {
+		ArrayList<DevelopmentCard> ret = new ArrayList<DevelopmentCard>();
+		for (Entry<DevelopmentCard, Integer> dcE : this.getDevCards().entrySet()) {
+			if (dcE.getKey() == DevelopmentCard.VICTORY_POINT)
+				continue;
+			for (int i=0, k=dcE.getValue(); i < k; i++)
+				ret.add(dcE.getKey());
+		}
+		System.out.println("Playable dev cards " + ret + ", actual dev cards: " + this.getDevCards());
+		return ret;
+	}
+	
 	protected void playDevCards() {
 		// avoid concurrent modification problem.
-		for (Entry<DevelopmentCard, Integer> dcE : new HashMap<DevelopmentCard, Integer>(this.getDevCards()).entrySet())
-			for (int i=0, k=dcE.getValue(); i < k; i++)
-				switch(dcE.getKey()) {
-				case VICTORY_POINT:
-					break;
-				case ROAD_BUILDING:
-					Board fakeBoard = Board.makeFakeBoard(this.getBoard());
-					boolean canPlaceTwoRoads = true;
-					ComputerPlayer fakePlayer = (ComputerPlayer) fakeBoard.getPlayerByColor(this.getPlayerColor());
-					for (int j=0; j<2; j++) {
-						if (this.chooseRoadLocation(fakeBoard, fakePlayer) == null)
-							{canPlaceTwoRoads = false; break;}
-					}
-					if (!canPlaceTwoRoads)
-						break;
-				default:
-					this.playCard(dcE.getKey());
+		for (DevelopmentCard dc : this.getPlayableDevCards())
+			switch(dc) {
+			case VICTORY_POINT:
+				// Shouldn't happen, but worth double-checking
+				break;
+			case ROAD_BUILDING:
+				Board fakeBoard = Board.makeFakeBoard(this.getBoard());
+				boolean canPlaceTwoRoads = true;
+				ComputerPlayer fakePlayer = (ComputerPlayer) fakeBoard.getPlayerByColor(this.getPlayerColor());
+				for (int j=0; j<2; j++) {
+					if (this.chooseRoadLocation(fakeBoard, fakePlayer) == null)
+					{canPlaceTwoRoads = false; break;}
 				}
+				if (!canPlaceTwoRoads)
+					break;
+			default:
+				this.playCard(dc);
+			}
 	}
 
 	@Override
@@ -173,7 +211,7 @@ public class ComputerPlayer extends Player {
 //			System.out.println("testing!");
 		
 		this.doAllPossiblePurchases();
-		CardCollection hand = this.getHand();  // TODO: for debugging, remove
+//		CardCollection hand = this.getHand();  // TODO: for debugging, remove
 		
 		// For each card in hand, trade down if possible to the maximum amount we can spend on single purchase.
 		for (Entry<CardType, Integer> ctEntry : this.getHand().getCards().entrySet()) {
@@ -208,12 +246,20 @@ public class ComputerPlayer extends Player {
 		return this.getBestIntersectionForCity(fakeBoard, fakePlayer, true);
 	}
 	
+	protected Collection<Intersection> getPossibleCityPlacements() {
+		List<Intersection> inters = new ArrayList<Intersection>();
+		for (Intersection i : this.getOwnedIntersections().getAll())
+			if (i.canPlaceCity())
+				inters.add(i);
+		return inters;
+	}
+	
 	Integer getBestIntersectionForCity(Board board, ComputerPlayer cp, boolean modifyBoard) {
 		if (cp.getCitiesInHand() <= 0)
 			return null;
 		int maxProb = 0;
 		Intersection bestInter = null;
-		for (Intersection inter : cp.getOwnedIntersections().getAll()) {
+		for (Intersection inter : cp.getPossibleCityPlacements()) {
 			// For cities, harbors don't matter, don't adjust.
 			int currentProb = getTotalProbability(inter);
 			if (inter.canPlaceCity() && currentProb >  maxProb) {
@@ -239,11 +285,7 @@ public class ComputerPlayer extends Player {
 			return null;
 		int maxProb = 0;
 		Intersection bestInter = null;
-		Iterable<Intersection> intersections;
-		if (initial)
-			intersections = board.getIntersections();
-		else
-			intersections = cp.getPossibleSettlementPlacements();
+		Iterable<Intersection> intersections = cp.getPossibleSettlementPlacements(initial);
 		for (Intersection inter : intersections) {
 			// For settlements, harbors matter so adjust prob.
 			int currentProb = getTotalAdjustedProbability(inter);
@@ -382,12 +424,19 @@ public class ComputerPlayer extends Player {
 		return new HashSet<Edge>(edges);
 	}
 	
-	protected Collection<Intersection> getPossibleSettlementPlacements() {
+	protected Collection<Intersection> getPossibleSettlementPlacements(boolean initial) {
 		List<Intersection> inters = new ArrayList<Intersection>();
-		for (Edge e : this.getOwnedEdges().getAll())
-			for (Intersection i : e.getIntersections())
+		if (initial) {
+			for (Intersection i : this.getBoard().getIntersections())
 				if (i.canPlaceSettlement())
 					inters.add(i);
+		}
+		else {
+			for (Edge e : this.getOwnedEdges().getAll())
+				for (Intersection i : e.getIntersections())
+					if (i.canPlaceSettlement())
+						inters.add(i);
+		}
 		return inters;
 	}
 	
@@ -490,5 +539,29 @@ public class ComputerPlayer extends Player {
 	
 	protected List<Purchases.PurchaseType> getBestPossiblePurchases(CardCollection hand) {
 		return this.getPossiblePurchases(hand).get(0);
+	}
+
+	public ComputerPlayer fakeCopy(Board fake) {
+		return new ComputerPlayer(fake, this);
+	}
+
+	@Override
+	public CardCollection chooseDiscardCards() {
+		CardCollection toDiscard = new CardCollection();
+		int numToDiscard = this.getHand().getTotalCards() / 2;
+		CardCollection fakeHand = this.getHand().cloneHand();
+		for (int i=0; i<numToDiscard; i++) {
+			CardType maxCard = null;
+			int maxNum = 0;
+			for (Entry<CardType, Integer> e : fakeHand.getCards().entrySet()) {
+				if (e.getValue() > maxNum) {
+					maxNum = e.getValue();
+					maxCard = e.getKey();
+				}
+			}
+			fakeHand.subtract(maxCard, 1);
+			toDiscard.addOne(maxCard);
+		}
+		return toDiscard;
 	}
 }

@@ -45,6 +45,7 @@ public abstract class Player {
 		this.citiesInHand = p.citiesInHand;
 		this.roadsInHand = p.roadsInHand;
 		this.settlementsInHand = p.settlementsInHand;
+		this.devCards = new HashMap<DevelopmentCard, Integer>(p.devCards);
 		assert (this.getOwnedEdges().getAll().size() == 0 ||
 				this.getOwnedEdges().getAll().get(0) ==  this.getBoard().getEdgeData().getEdge(this.getOwnedEdges().getAll().get(0).getId()));
 	}
@@ -55,6 +56,10 @@ public abstract class Player {
 	
 	HashMap<DevelopmentCard, Integer> getDevCards() {
 		return this.devCards;
+	}
+	
+	protected int getNumVPs() {
+		return this.getBoard().getVPData().getNumVPsOfPlayer(this.getPlayerColor());
 	}
 	
 	protected DataContainer.KeyedRelation<Intersection> getOwnedIntersections() {
@@ -161,6 +166,9 @@ public abstract class Player {
 		this.settlementsInHand--;
 		this.getBoard().addVictoryPoint(this);
 		this.getOwnedIntersections().add(interId);
+		if (this.harborsOwned != null)
+			// Don't always do this, b/c expensive to create harborsOwned when we don't need to
+			this.getHarborsOwned().add(this.getBoard().getIntersectionData().getIntersection(interId).getHarbor());
 		this.getBoard().placeSettlement(interId, this.getPlayerColor());
 	}
 	
@@ -228,7 +236,7 @@ public abstract class Player {
 		if (nexts.size() == 0) {
 			if (numConsecutive > this.longestConsecutiveRoads) {
 				this.longestConsecutiveRoads = numConsecutive;
-				System.out.println(this.getPlayerColor() + " has " + this.longestConsecutiveRoads + " longest road length");
+//				System.out.println(this.getPlayerColor() + " has " + this.longestConsecutiveRoads + " longest road length");
 			}
 			return;
 		}
@@ -404,6 +412,9 @@ public abstract class Player {
 	public abstract boolean chooseAndPlaceRoad();
 	
 	protected void doTradeWithSelf(CardType tradingIn, CardType gettingBack) {
+		System.out.println("Trading in " + this.getTradeRatio(tradingIn) + " " + tradingIn + " for a " + gettingBack);
 		this.getHand().subtract(tradingIn, this.getTradeRatio(tradingIn)).addOne(gettingBack);
 	}
+
+	public abstract CardCollection chooseDiscardCards();
 }

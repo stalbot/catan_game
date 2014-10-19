@@ -1,6 +1,7 @@
 package com.steven.catanserver;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 public class HandData {
 	
@@ -14,7 +15,9 @@ public class HandData {
 	}
 	
 	public HandData(HandData handData) {
-		this.hands = new HashMap<PlayerColor, CardCollection>(handData.hands);
+		this.hands = new HashMap<PlayerColor, CardCollection>();
+		for (Entry<PlayerColor, CardCollection> e : handData.hands.entrySet())
+			this.hands.put(e.getKey(), new CardCollection(e.getValue()));
 	}
 
 	public CardCollection getHand(PlayerColor player) {

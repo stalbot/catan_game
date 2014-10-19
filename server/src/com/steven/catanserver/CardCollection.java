@@ -28,6 +28,10 @@ public class CardCollection {
 		}
 	}
 	
+	public CardCollection(CardCollection toCopy) {
+		this.cardCounts = new HashMap<CardType, Integer>(toCopy.cardCounts);
+	}
+
 	public int getCardCount(CardType card) {
 		Integer count = this.cardCounts.get(card);
 		if (count == null)
@@ -57,12 +61,13 @@ public class CardCollection {
 		// OK, this does make a new data structure, but it woudln't have to if Java were better.
 		for (Integer i : this.cardCounts.values()) 
 			totalCards += i;
-		int rand = new Random().nextInt(totalCards);
+		int rand = new Random().nextInt(totalCards) + 1;
 		int totalSeen = 0;
 		for (Entry<CardType, Integer> e : this.cardCounts.entrySet()) {
 			totalSeen += e.getValue();
 			if (totalSeen >= rand) {
 				e.setValue(e.getValue() - 1);
+				assert (e.getValue() >= 0);
 				return e.getKey();
 			}
 		}
@@ -148,5 +153,9 @@ public class CardCollection {
 	public String toString() {
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		return gson.toJson(this.cardCounts).toString();
+	}
+	
+	void resetHand(CardCollection newHand) {
+		this.cardCounts = newHand.cardCounts;
 	}
 }

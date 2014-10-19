@@ -2,7 +2,7 @@ package com.steven.catanserver;
 
 public enum TurnEvent {
 	TURN_START, TURN_SETUP_START, INTERSECTION_CHANGE, EDGE_CHANGE, TRADE_EVENT, TRADE_PROPOSAL_EVENT, 
-		DEV_CARD_PULL_EVENT, WIN_EVENT, ROBBER_MOVE_EVENT, DEV_CARD_PLAY_EVENT;
+		DEV_CARD_PULL_EVENT, WIN_EVENT, ROBBER_MOVE_EVENT, DEV_CARD_PLAY_EVENT, ROLL_EVENT;
 
 	/* Simple classes to handle packaging of event data. */
 	
@@ -114,4 +114,13 @@ public enum TurnEvent {
 		}
 	}
 
+	public static class RollEvent {
+		String eventType = ROLL_EVENT.toString();
+		int numberRolled;
+		RollEvent(int n) {
+			this.numberRolled = n;
+		}
+	}
+
+	
 }

@@ -144,7 +144,7 @@ catanApp.factory('catanBackend', ['$http', function($http) {
         catanBackend.ws.send(message);
     };
     var newBoard = function (userId) {
-        return $http.post(newBoardUrl + '?' + $.param({user_id: userId})).error(function(err) { alert(JSON.stringify(err)); });
+        return $http.post(newBoardUrl + '?' + $.param({user_id: userId, num_players: 4})).error(function(err) { alert(JSON.stringify(err)); });
     };
 
     catanBackend.getState = getState;
@@ -385,6 +385,9 @@ catanApp.controller('BoardController', ['$scope', 'catanBackend', function($scop
         },
         DEV_CARD_PLAY_EVENT: function(message) {
             return 'Player ' + message.player.color + ' played a ' + message.devCard + ' card.';
+        },
+        ROLL_EVENT: function(message) {
+            return message.numberRolled + ' was rolled.';
         }
     };
 

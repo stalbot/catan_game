@@ -110,4 +110,10 @@ public class HumanPlayer extends Player {
 		return false;
 	}
 
+	@Override
+	public CardCollection chooseDiscardCards() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

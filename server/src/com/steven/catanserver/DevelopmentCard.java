@@ -1,13 +1,12 @@
 package com.steven.catanserver;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public enum DevelopmentCard {
 	SOLDIER(14) {
 		public Boolean play(Player player) {
 			// TODO: increment largest army count
+			player.addPlayedSoldier();
 			return player.moveRobber();
 		}
 	}, 
@@ -38,7 +37,7 @@ public enum DevelopmentCard {
 		}
 	};
 	
-	public static List<DevelopmentCard> getNewDevCardStack() {
+	public static LinkedList<DevelopmentCard> getNewDevCardStack() {
 		LinkedList<DevelopmentCard> devStack = new LinkedList<DevelopmentCard>();
 		for (int i=0; i<DevelopmentCard.values().length; i++) {
 			DevelopmentCard d = DevelopmentCard.values()[i];

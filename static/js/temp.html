@@ -7,6 +7,11 @@
                 stroke="black"
                 stroke-width="2px">
             </polygon>
+            <line ng-repeat="line in harborLines"
+                ng-attr-x1="{{ line.x1 }}" ng-attr-x2="{{ line.x2 }}"
+                ng-attr-y1="{{ line.y1 }}" ng-attr-y2="{{ line.y2 }}"
+                stroke-width="3px" stroke-dasharray="5,5" stroke="black">
+            </line>
             <line ng-repeat="edge in edges"
                 ng-attr-x1="{{ edge.x1 }}" ng-attr-x2="{{ edge.x2 }}"
                 ng-attr-y1="{{ edge.y1 }}" ng-attr-y2="{{ edge.y2 }}"
@@ -16,12 +21,6 @@
             </polygon>
             <polygon ng-attr-points="{{ robberPoints }}" fill="black">
             </polygon>
-
-            <line ng-repeat="line in harborLines"
-                ng-attr-x1="{{ line.x1 }}" ng-attr-x2="{{ line.x2 }}"
-                ng-attr-y1="{{ line.y1 }}" ng-attr-y2="{{ line.y2 }}"
-                stroke-width="3px" stroke-dasharray="5,5" stroke="black">
-            </line>
 
             <circle ng-repeat="circle in circles"
                 ng-attr-cx="{{ circle.cx }}"

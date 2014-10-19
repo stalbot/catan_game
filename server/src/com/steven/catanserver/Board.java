@@ -26,8 +26,9 @@ public class Board {
 		
 		for (HumanPlayer hp : template.getHumanPlayers())
 			fake.addHumanPlayer(new HumanPlayer(fake, hp));
-		for (ComputerPlayer cp: template.getComputerPlayers())
-			fake.addComputerPlayer(new ComputerPlayer(fake, cp));
+		for (ComputerPlayer cp: template.getComputerPlayers()) {
+			fake.addComputerPlayer(cp.fakeCopy(fake));
+		}
 		
 		fake.devCards = new LinkedList<DevelopmentCard>(template.devCards);  // cards immutable, list is mutable
 		fake.handData = new HandData(template.handData);  // should not be used
@@ -54,7 +55,11 @@ public class Board {
 			this.addHumanPlayer(hp);
 		}
 		for (int i=humanPlayers.size(); i<numPlayers; i++) {
-			this.addComputerPlayer(new ComputerPlayer(PlayerColor.values()[i], this, turnOrders.remove()));
+			PlayerColor pc = PlayerColor.values()[i];
+			if (pc == PlayerColor.ORANGE || pc == PlayerColor.RED)
+				this.addComputerPlayer(new StateAwareCPUPlayer(PlayerColor.values()[i], this, turnOrders.remove()));
+			else
+				this.addComputerPlayer(new StateSearchingCPUPlayer(PlayerColor.values()[i], this, turnOrders.remove()));
 		}
 		this.handData = new HandData(this.players);
 		this.victoryPoints = new VictoryPointData(VPS_TO_WIN, this.players);
@@ -95,7 +100,7 @@ public class Board {
 	private transient HandData handData;
 	private transient HashMap<Integer, Collection<Hex>> hexesByRollNum = null;
 	private VictoryPointData victoryPoints;
-	private List<DevelopmentCard> devCards;
+	private LinkedList<DevelopmentCard> devCards;
 	
 	public String getId() {
 		return this.id;
@@ -168,7 +173,7 @@ public class Board {
 		return this.devCards.size();
 	}
 	
-	public List<DevelopmentCard> getDevCards() {
+	public LinkedList<DevelopmentCard> getDevCards() {
 		return this.devCards;
 	}
 	
@@ -231,7 +236,7 @@ public class Board {
 	}
 	
 	public void placeRoad(int edgeId, PlayerColor playerColor) {
-		System.out.println("Placing road.");
+//		System.out.println("Placing road.");
 		Edge edge = this.getEdgeData().getEdge(edgeId);
 		Player player = this.getPlayersByColors().get(playerColor);
 		assert (player.getOwnedEdges().getAll().contains(edge));

@@ -117,7 +117,7 @@ public class Intersection implements DataContainer.Keyable {
 	}
 	
 	public void placeSettlement(Player p) {
-		System.out.println("Placing settlement on intersection " + this.getId() + " with edge neighbors " + this.getNeighboringEdges().ids);
+//		System.out.println("Placing settlement on intersection " + this.getId() + " with edge neighbors " + this.getNeighboringEdges().ids);
 		this.color = p.getPlayerColor();
 	}
 	
