@@ -261,6 +261,13 @@ public abstract class Player {
 	protected void pullCard() {
 		this.getBoard().pullCard(this);
 	}
+	
+	public int getNumDevCards() {
+		int ret = 0;
+		for (Integer i : this.devCards.values())
+			ret += i;
+		return ret;
+	}
 
 	protected void addCard(DevelopmentCard devCard) {
 		Integer numCards = this.devCards.get(devCard);

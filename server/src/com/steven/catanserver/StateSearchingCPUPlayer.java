@@ -7,19 +7,8 @@ import com.steven.catanserver.Purchases.PurchaseType;
 
 public class StateSearchingCPUPlayer extends StateAwareCPUPlayer {
 	
-	private static final int MAX_TURNS_TO_LOOK = 500;
-	private static final double DEV_CARD_VP_VAL = 0.5; 
-	private static final double ROAD_VP_VAL = 0.2;
-	private static final double SETTLEMENT_VP_VAL = 0.9; // reflective of needing a road
-	private static final double CITY_VP_VAL = 0.9; // reflective of needing a settlement
-	private static final HashMap<PurchaseType, Double> heuristicPurchaseValues = new HashMap<PurchaseType, Double>();
-	static {
-		heuristicPurchaseValues.put(PurchaseType.DEVELOPMENT_CARD, DEV_CARD_VP_VAL);
-		heuristicPurchaseValues.put(PurchaseType.SETTLEMENT, SETTLEMENT_VP_VAL);
-		heuristicPurchaseValues.put(PurchaseType.CITY, CITY_VP_VAL);
-		heuristicPurchaseValues.put(PurchaseType.ROAD, ROAD_VP_VAL);
-	}
-
+	private static final double CARDS_PER_VP = 6;
+	
 	public StateSearchingCPUPlayer(PlayerColor pc, Board board, int turnOrder) {
 		super(pc, board, turnOrder);
 	}
@@ -39,54 +28,55 @@ public class StateSearchingCPUPlayer extends StateAwareCPUPlayer {
 		}
 		return arg0;
 	}
-	
-	protected int getExpectedTurnsToWinStupid(Player p) {
-		// As the name suggests, a very dumb way to try to determine how many turns to win.
-		// Not only dumb in that it is a bad heuristic, but it's not even that easy to calculate.
-		HashMap<CardType, Double> expectedCards = new HashMap<CardType, Double>();
-		for (Entry<CardType, Integer> e : p.getHand().getCards().entrySet()) {
-			expectedCards.put(e.getKey(), (double) e.getValue());
-		}
-		CardCollection fakeHand = new CardCollection();
-		
-		int numTurnsInFuture = 0;
-		double currentVPs = (double) p.getNumVPs();
-		HashMap<CardType, Double> expectedCardsPerTurn = new HashMap<CardType, Double>();
-		for (CardType ct : CardType.values())
-			expectedCardsPerTurn.put(ct, 0d);
-		for (Intersection i : p.getOwnedIntersections().getAll())
-			for (Hex h : i.getHexes()) {
-				CardType ct = h.getType().getCardType();
-				if (ct == null)
-					continue;
-				double incrementalVal = (i.getIsCity() ? 2 : 1) * h.getRollProbability() / 36;
-				double oldVal = expectedCardsPerTurn.get(ct);
-				double newVal = oldVal + incrementalVal;
-				expectedCardsPerTurn.put(ct, newVal);
-			}
-		do {
-			fakeHand.getCards().clear();
-			for (Entry<CardType, Double> e : expectedCards.entrySet())
-				fakeHand.getCards().put(e.getKey(), e.getValue().intValue());
-			for (PurchaseType pt : PurchaseType.values()) {
-				if (fakeHand.canPurchase(pt.getPrice())) {
-					expectedCards = subtractHand(expectedCards, pt.getPrice().getCards());
-				}
-				currentVPs += heuristicPurchaseValues.get(pt);
-			}
-			if (currentVPs >= 10)
-				return numTurnsInFuture;
-			numTurnsInFuture += 1;
-			for (Entry<CardType, Double> e : expectedCardsPerTurn.entrySet()) 
-				expectedCards.put(e.getKey(), expectedCards.get(e.getKey()) + e.getValue());
-		} while(numTurnsInFuture <= MAX_TURNS_TO_LOOK);
-		return MAX_TURNS_TO_LOOK;
-	}
 
 	protected double getStateValue(State state) {
-		double stateVal = -getExpectedTurnsToWinStupid(state.getPlayer());
+//		double stateVal = -this.getExpectedTurnsToWinSimple(state, 0) + 1000;
+		double stateVal = -this.getExpectedTurnsToWinBetter(state) + 1000;
 		state.setValue(stateVal);
+//		System.out.println(state);
 		return stateVal;
+	}
+
+	protected double getExpectedTurnsToWinSimple(State state, double bonus) {
+		Player player = state.getPlayer();
+		Board b = state.getBoard();
+		// A simple, but not admissible, heuristic that guesses the total needed to win
+		// based on a fixed card -> VP tradeoff
+		// It is not admissible because it could in theory overestimate the turns needed to win,
+		// not only because you could get lucky and pull a bunch of Victory Point development cards,
+		// but because it does not take into account the fact that purchasing more settlements 
+		// increases your resource acquisition rate.
+		double startingVPValue = player.getNumVPs() + (bonus + state.getExpectedExtraCards() + player.getHand().getTotalCards()) / CARDS_PER_VP;
+		double numVPsNeeded = b.getVPData().getTotalToWin() - startingVPValue;
+//		System.out.println("VPs to win " + numVPsNeeded);
+		if (numVPsNeeded <= 0)
+			return 0;
+		
+		double expectedCardsPerTurn = 0;
+		for (Intersection i : player.getOwnedIntersections().getAll())
+			for (Hex h : i.getHexes())
+				expectedCardsPerTurn += (i.getIsCity() ? 2 : 1) * h.getRollProbability();
+		expectedCardsPerTurn /= 36;
+		
+		double turnsPerVP = CARDS_PER_VP / expectedCardsPerTurn;
+//		System.out.println("Estimated " + (numVPsNeeded * turnsPerVP) + " turns needed to win for player " + player.getPlayerColor());
+		return numVPsNeeded * turnsPerVP;
+	}
+	
+	protected double getExpectedTurnsToWinBetter(State state) {
+		int freeInters = 0;
+		Player player = state.getPlayer();
+		HashSet<Integer> interIds = new HashSet<Integer>();
+		for (Edge e : player.getOwnedEdges().getAll()) {
+			for (Intersection i : e.getIntersections())
+				if (!interIds.add(i.getId()) && i.canPlaceCity())
+					freeInters++;
+		}
+		
+		double bonus = 0;
+		bonus += freeInters * 2.5;
+		bonus += player.getNumDevCards() * 3.5;
+		return this.getExpectedTurnsToWinSimple(state, bonus);
 	}
 	
 }

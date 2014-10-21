@@ -71,4 +71,8 @@ public class VictoryPointData {
 		currentVPs = this.victoryPoints.get(this.longestRoadPlayer);
 		this.victoryPoints.put(this.longestRoadPlayer, currentVPs + LONGEST_ROAD_VALUE);
 	}
+	
+	int getTotalToWin() {
+		return this.totalToWin;
+	}
 }

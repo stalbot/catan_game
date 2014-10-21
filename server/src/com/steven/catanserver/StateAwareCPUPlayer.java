@@ -30,26 +30,25 @@ public class StateAwareCPUPlayer extends ComputerPlayer {
 		@Override
 		public Collection<State> transform(State state) {
 			List<State> ret = new ArrayList<State>();
-			for (List<PurchaseType> purchases : state.getPlayer().getPossiblePurchases()) {
+			for (List<PurchaseType> purchases : getPossiblePurchases(state)) {
 				State newState = null;
 				for (PurchaseType pt : purchases) {
 					switch(pt) {
 					case SETTLEMENT:
-						newState = state.getPlayer().chooseSettlementLocation(state, false);
+						newState = chooseSettlementLocation(state, false);
 						break;
 					case CITY:
-						newState = state.getPlayer().chooseCityLocation(state);
+						newState = chooseCityLocation(state);
 						break;
 					case DEVELOPMENT_CARD:
 						if (state.getBoard().getRemainingDevCards() > 0)
 							newState = state.newStateFromAction(new DevCardBuy());
 						break;
 					case ROAD:
-						newState = state.getPlayer().chooseRoadLocation(state);
+						newState = chooseRoadLocation(state);
 						break;
 					}
 				}
-				// TODO: dev cards
 				if (newState != null)
 					ret.add(newState);
 			}
@@ -61,13 +60,15 @@ public class StateAwareCPUPlayer extends ComputerPlayer {
 	public Boolean doTurn() {
 		State startState = new State(this.getBoard(), this);
 		List<State> states = this.getPossibleSelfTradeStates(startState);
-		System.out.println("Pre dev card, " + states.size() + " states");
+//		System.out.println("Pre dev card, " + states.size() + " states");
 		for (State st : new ArrayList<State>(states)) {
-			states.addAll(st.getPlayer().getDevCardPlayStates(st));
+			this.getStateValue(st);
+			states.addAll(this.getDevCardPlayStates(st));
 		}
-		System.out.println("Post dev card, " + states.size() + " states");
+//		System.out.println("Post dev card, " + states.size() + " states");
 		List<State> possibleStates = new MultiThreadedStateReducer(new TradeStateTransform()).reduce(states);
 		
+		System.out.println("Player " + this.getPlayerColor() + " found states " + possibleStates);
 		if (possibleStates.size() > 0) {
 			State bestState = Collections.max(possibleStates);
 			for (Action a : bestState.getActions())
@@ -124,7 +125,7 @@ public class StateAwareCPUPlayer extends ComputerPlayer {
 		// TODO: they are not actually playing dev cards
 		// Get the powerset! woohoo!
 		List<State> states = new ArrayList<State>();
-		for (DevelopmentCard dc : this.getPlayableDevCards()) {
+		for (DevelopmentCard dc : ((ComputerPlayer) startState.getPlayer()).getPlayableDevCards()) {
 			DevCardPlay dcp = new DevCardPlay(dc); // TODO: make sure this can be shared
 			for (int i=0, k=states.size(); i<k; i++) {
 				// Doing the old fashion way to avoid concurrent modification problem
@@ -139,7 +140,7 @@ public class StateAwareCPUPlayer extends ComputerPlayer {
 	protected State chooseCityLocation(State state) {
 		if (state.getPlayer().getCitiesInHand() <= 0)
 			return state;
-		double bestStateVal = 0;
+		double bestStateVal = Double.NEGATIVE_INFINITY;  // Bleh?
 		State bestState = state;
 		
 		for (Intersection i : ((StateAwareCPUPlayer) state.getPlayer()).getPossibleCityPlacements()) {
@@ -158,14 +159,14 @@ public class StateAwareCPUPlayer extends ComputerPlayer {
 			return state;
 		double bestStateVal = Double.NEGATIVE_INFINITY;  // Bleh?
 		State bestState = state;
-		for (Intersection i : ((StateAwareCPUPlayer) state.getPlayer()).getPossibleSettlementPlacements(initial)) {
+		for (Intersection i : ((ComputerPlayer) state.getPlayer()).getPossibleSettlementPlacements(initial)) {
 			State newState;
 			if(!initial)
 				newState = state.newStateFromAction(new SettlementBuy(i.getId()));
 			else
 				newState = state.newStateFromAction(new SettlementPlace(i.getId()));
 			double stateVal = this.getStateValue(newState);
-			System.out.println("Value of old state: " + bestStateVal + ", value of new state " + stateVal);
+//			System.out.println("Value of old state: " + bestStateVal + ", value of new state " + stateVal);
 			if (stateVal > bestStateVal) {
 				bestStateVal = stateVal;
 				bestState = newState;
@@ -177,9 +178,9 @@ public class StateAwareCPUPlayer extends ComputerPlayer {
 	protected State chooseRoadLocation(State state) {
 		if (state.getPlayer().getRoadsInHand() <= 0)
 			return state;
-		double bestStateVal = 0;
+		double bestStateVal = Double.NEGATIVE_INFINITY;  // Bleh?
 		State bestState = state;
-		for (Edge e : ((StateAwareCPUPlayer) state.getPlayer()).getPossibleRoadPlacements()) {
+		for (Edge e : ((ComputerPlayer) state.getPlayer()).getPossibleRoadPlacements()) {
 			State newState = state.newStateFromAction(new RoadBuy(e.getId()));
 			double stateVal = this.getStateValue(newState);
 			if (stateVal > bestStateVal) {
@@ -369,12 +370,12 @@ public class StateAwareCPUPlayer extends ComputerPlayer {
 		}
 	}
 	
-	protected static class State implements Comparable<State> {
+	protected class State implements Comparable<State> {
 		private LinkedList<Action> actions;
 		private Board boardState;
 		private Player boardPlayer;
 		// values are approximate, and we can save some space by storing them as floats
-		private float value = 0;
+		private float value = -1;
 		private float expectedExtraCards = 0;
 		
 		State(Board b, Player p) {
@@ -400,8 +401,8 @@ public class StateAwareCPUPlayer extends ComputerPlayer {
 			return this.actions;
 		}
 		
-		StateAwareCPUPlayer getPlayer() {
-			return (StateAwareCPUPlayer) this.boardPlayer;
+		Player getPlayer() {
+			return this.boardPlayer;
 		}
 		
 		Board getBoard() {
@@ -429,6 +430,10 @@ public class StateAwareCPUPlayer extends ComputerPlayer {
 		@Override
 		public int compareTo(State arg0) {
 			return (int) Math.signum(this.getValue() - arg0.getValue());
+		}
+		
+		public String toString() {
+			return "State with " + this.actions.size() + " actions and value " + this.value;
 		}
 	}
 	

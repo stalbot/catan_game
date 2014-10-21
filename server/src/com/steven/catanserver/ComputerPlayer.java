@@ -475,7 +475,11 @@ public class ComputerPlayer extends Player {
 	@Override
 	public boolean chooseAndPlaceRoad() {
 		Integer id = this.chooseRoadLocation();
-		assert (id != null); // CPU should never have done this if that is the case
+		if (id == null) {
+			System.out.println("Player " + this.getPlayerColor() + " placed a road they didn't want to place!");
+			return true;
+		}
+//		assert (id != null); // CPU should never have done this if that is the case
 		this.placeRoad(id);
 		return true;
 	}
